@@ -137,6 +137,32 @@
     .site-nav-links a:hover {
       color: #00f5ff;
     }
+    .nav-btn {
+      background: rgba(0, 245, 255, 0.16);
+      border: 1px solid rgba(0, 245, 255, 0.65);
+      border-radius: 999px;
+      padding: 7px 16px;
+      color: #00f5ff !important;
+      text-shadow: 0 0 10px rgba(0, 245, 255, 0.7);
+      box-shadow: 0 0 14px rgba(0, 245, 255, 0.25), inset 0 0 10px rgba(0, 245, 255, 0.1);
+      animation: nav-btn-pulse 2.6s ease-in-out infinite;
+    }
+    .nav-btn:hover {
+      background: rgba(0, 245, 255, 0.3);
+      box-shadow: 0 0 24px rgba(0, 245, 255, 0.5), inset 0 0 14px rgba(0, 245, 255, 0.18);
+    }
+    body.fire-theme .nav-btn {
+      background: rgba(255, 110, 20, 0.2);
+      border-color: rgba(255, 130, 40, 0.75);
+      color: #ff8c2e !important;
+      text-shadow: 0 0 10px rgba(255, 90, 0, 0.8);
+      box-shadow: 0 0 14px rgba(255, 90, 0, 0.3), inset 0 0 10px rgba(255, 90, 0, 0.12);
+    }
+    @keyframes nav-btn-pulse {
+      0%, 100% { box-shadow: 0 0 10px rgba(0, 245, 255, 0.2), inset 0 0 8px rgba(0, 245, 255, 0.08); }
+      50%      { box-shadow: 0 0 24px rgba(0, 245, 255, 0.5), inset 0 0 14px rgba(0, 245, 255, 0.16); }
+    }
+    body.fire-theme .site-nav-links a:hover { color: #ff8c2e; }
 
     /* ---------- RPM meter ---------- */
     .rpm-meter {
@@ -202,6 +228,39 @@
     @keyframes hint-pulse {
       0%, 100% { opacity: 1; }
       50%      { opacity: 0.55; }
+    }
+
+    /* ---------- chipset 3d showcase ---------- */
+    html { scroll-behavior: smooth; }
+    #chipset-stage {
+      position: relative;
+      width: 100%;
+      max-width: 920px;
+      height: 520px;
+      margin: 10px auto 0;
+      cursor: grab;
+      border-radius: 14px;
+      background: radial-gradient(ellipse at 50% 72%, rgba(0, 120, 220, 0.12), transparent 65%);
+    }
+    #chipset-stage:active { cursor: grabbing; }
+    #chipset-stage canvas {
+      max-width: none;
+      max-height: none;
+      object-fit: auto;
+      display: block;
+    }
+    .chipset-hint {
+      color: #00f5ff;
+      text-shadow: 0 0 10px rgba(0, 245, 255, 0.5);
+      font-size: 12px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      animation: hint-pulse 2.2s ease-in-out infinite;
+      margin-bottom: 8px;
+    }
+    body.fire-theme .chipset-hint {
+      color: #ff8c2e;
+      text-shadow: 0 0 10px rgba(255, 90, 0, 0.6);
     }
 
     /* ---------- fire theme (10s turbo mode) ---------- */
@@ -503,6 +562,7 @@
         <li><a href="#">Features</a></li>
         <li><a href="#">Specs</a></li>
         <li><a href="#">About</a></li>
+        <li><a href="#chipset-3d" class="nav-btn">Chipset</a></li>
       </ul>
     </div>
   </nav>
@@ -1007,6 +1067,22 @@
       </section>
       <!-- ======== End HP 15 ======== -->
 
+      <!-- ======== Chipset 3D Showcase ======== -->
+      <section class="mb-32" id="chipset-3d">
+        <div class="glass-panel rounded-xl relative overflow-hidden px-6 py-14 md:px-12 text-center">
+          <div class="absolute top-[-90px] right-[18%] w-80 h-80 rounded-full blur-[130px] bg-primary-container/15 pointer-events-none glow-orb"></div>
+
+          <div class="relative z-10">
+            <span class="inline-block px-3 py-1 rounded-full border border-primary-container/40 text-primary-container text-xs uppercase tracking-widest font-label-sm mb-6">Interactive 3D</span>
+            <h2 class="font-display-lg text-on-surface leading-tight mb-3" style="font-size:clamp(26px,4.5vw,56px)">Intel&reg; Core&trade; Ultra&nbsp;5</h2>
+            <p class="text-on-surface-variant max-w-2xl mx-auto mb-2 text-lg">Series-2 &middot; Discrete Graphics Required &middot; Hyper-Realistic 3D Showcase</p>
+            <p id="chipset-hint" class="chipset-hint">Click the Intel box to unbox the chipset &mdash; drag to rotate 360&deg;</p>
+            <div id="chipset-stage"></div>
+          </div>
+        </div>
+      </section>
+      <!-- ======== End Chipset 3D ======== -->
+
     </main>
 
     <!-- Footer -->
@@ -1499,6 +1575,367 @@
           onScroll();
         }));
       });
+    })();
+  </script>
+
+  <!-- Three.js (pinned, SRI-checked) for the chipset showcase -->
+  <script crossorigin="anonymous" integrity="sha384-vV17nr/rMaJqmeZkFUzXLpHdQ+ME5QHKdydaqqN+3Ga39RJlNrTatJxHwGV4ml2C" src="https://unpkg.com/three@0.147.0/build/three.min.js"></script>
+  <script crossorigin="anonymous" integrity="sha384-I0DMsfimAPIqWT8lF+oA997gRgdUi3jhidoTq3fN0zmn35smXZukD01FLnsPRU9i" src="https://unpkg.com/three@0.147.0/examples/js/controls/OrbitControls.js"></script>
+
+  <script>
+    /* ---- Intel Core Ultra 5: interactive 3D chipset showcase ---- */
+    (() => {
+      const stage = document.getElementById('chipset-stage');
+      const hint = document.getElementById('chipset-hint');
+      if (!stage) return;
+
+      let inited = false;
+      const init = () => {
+        if (inited || typeof THREE === 'undefined') return;
+        inited = true;
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+        renderer.setSize(stage.clientWidth, stage.clientHeight);
+        renderer.outputEncoding = THREE.sRGBEncoding;
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.15;
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        stage.appendChild(renderer.domElement);
+
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(38, stage.clientWidth / stage.clientHeight, 0.1, 500);
+        camera.position.set(0, 26, 62);
+
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.target.set(0, 13, 0);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.06;
+        controls.enablePan = false;
+        controls.minDistance = 30;
+        controls.maxDistance = 110;
+        controls.maxPolarAngle = Math.PI * 0.62;
+
+        /* ---- environment map: studio softboxes for premium reflections ---- */
+        const envCanvas = document.createElement('canvas');
+        envCanvas.width = 512; envCanvas.height = 256;
+        const ec = envCanvas.getContext('2d');
+        const grad = ec.createLinearGradient(0, 0, 0, 256);
+        grad.addColorStop(0, '#25405f'); grad.addColorStop(0.5, '#0d1622'); grad.addColorStop(1, '#05070c');
+        ec.fillStyle = grad; ec.fillRect(0, 0, 512, 256);
+        ec.fillStyle = 'rgba(255,255,255,0.9)';
+        ec.fillRect(60, 40, 150, 26);
+        ec.fillRect(320, 70, 120, 20);
+        ec.fillStyle = 'rgba(120,220,255,0.5)';
+        ec.fillRect(0, 120, 512, 10);
+        const envTex = new THREE.CanvasTexture(envCanvas);
+        envTex.mapping = THREE.EquirectangularReflectionMapping;
+        const pmrem = new THREE.PMREMGenerator(renderer);
+        scene.environment = pmrem.fromEquirectangular(envTex).texture;
+        envTex.dispose(); pmrem.dispose();
+
+        /* ---- lights ---- */
+        scene.add(new THREE.AmbientLight(0x334455, 0.7));
+        const key = new THREE.DirectionalLight(0xffffff, 1.4);
+        key.position.set(18, 40, 24);
+        key.castShadow = true;
+        key.shadow.mapSize.set(1024, 1024);
+        key.shadow.camera.left = -40; key.shadow.camera.right = 40;
+        key.shadow.camera.top = 40; key.shadow.camera.bottom = -40;
+        scene.add(key);
+        const rim = new THREE.PointLight(0x00f5ff, 0.9, 220);
+        rim.position.set(-30, 18, -25);
+        scene.add(rim);
+        const warm = new THREE.PointLight(0xffb36b, 0.5, 180);
+        warm.position.set(26, 8, -20);
+        scene.add(warm);
+
+        /* ---- canvas texture helper ---- */
+        const makeCanvas = (w, h, draw) => {
+          const c = document.createElement('canvas'); c.width = w; c.height = h;
+          draw(c.getContext('2d'), w, h);
+          const t = new THREE.CanvasTexture(c);
+          t.anisotropy = 8;
+          return t;
+        };
+
+        /* IHS top: brushed silver + CORE ULTRA 5 label */
+        const ihsTex = makeCanvas(1024, 1024, g => {
+          const base = g.createLinearGradient(0, 0, 1024, 1024);
+          base.addColorStop(0, '#d8dcdf'); base.addColorStop(0.5, '#b8bec4'); base.addColorStop(1, '#cfd4d8');
+          g.fillStyle = base; g.fillRect(0, 0, 1024, 1024);
+          g.globalAlpha = 0.05;
+          for (let i = 0; i < 900; i++) {
+            const y = Math.random() * 1024;
+            g.strokeStyle = Math.random() > 0.5 ? '#ffffff' : '#8a9096';
+            g.lineWidth = Math.random() * 1.6;
+            g.beginPath(); g.moveTo(0, y); g.lineTo(1024, y + (Math.random() - 0.5) * 6); g.stroke();
+          }
+          g.globalAlpha = 1;
+          g.fillStyle = '#1b2733'; g.textBaseline = 'top';
+          g.font = '600 92px "Segoe UI", Arial';
+          g.fillText('intel\u00ae', 70, 80);
+          g.font = '800 150px "Segoe UI", Arial';
+          g.fillText('CORE', 70, 300);
+          g.fillText('ULTRA', 70, 460);
+          g.font = '900 430px "Segoe UI", Arial';
+          g.fillText('5', 720, 260);
+          g.font = '600 58px "Segoe UI", Arial';
+          g.fillStyle = '#31404f';
+          g.fillText('SERIES-2', 70, 660);
+          g.font = '500 38px "Segoe UI", Arial';
+          g.fillStyle = '#4a5a68';
+          g.fillText('DISCRETE GRAPHICS REQUIRED', 70, 780);
+          g.strokeStyle = 'rgba(60,75,90,0.5)'; g.lineWidth = 6;
+          g.strokeRect(28, 28, 968, 968);
+        });
+
+        /* substrate top: dark green PCB with gold traces */
+        const pcbTex = makeCanvas(512, 512, g => {
+          g.fillStyle = '#0c1f14'; g.fillRect(0, 0, 512, 512);
+          g.strokeStyle = 'rgba(212,175,55,0.55)'; g.lineWidth = 2;
+          for (let i = 0; i < 40; i++) {
+            let x = Math.random() * 512, y = Math.random() * 512;
+            g.beginPath(); g.moveTo(x, y);
+            for (let s = 0; s < 4; s++) {
+              if (Math.random() > 0.5) x += (Math.random() - 0.5) * 160;
+              else y += (Math.random() - 0.5) * 160;
+              g.lineTo(x, y);
+            }
+            g.stroke();
+          }
+          g.fillStyle = 'rgba(212,175,55,0.8)';
+          for (let i = 0; i < 120; i++) {
+            g.beginPath(); g.arc(Math.random() * 512, Math.random() * 512, 2.4, 0, Math.PI * 2); g.fill();
+          }
+        });
+
+        /* chip underside: gold contact pad grid */
+        const padTex = makeCanvas(512, 512, g => {
+          g.fillStyle = '#101b12'; g.fillRect(0, 0, 512, 512);
+          g.fillStyle = '#d4af37';
+          for (let x = 20; x < 500; x += 28) for (let y = 20; y < 500; y += 28) {
+            g.beginPath(); g.arc(x, y, 7, 0, Math.PI * 2); g.fill();
+          }
+        });
+
+        /* Intel retail box faces */
+        const boxFrontTex = makeCanvas(512, 512, g => {
+          const bg = g.createLinearGradient(0, 0, 0, 512);
+          bg.addColorStop(0, '#0a6ab8'); bg.addColorStop(0.6, '#0554a0'); bg.addColorStop(1, '#023a72');
+          g.fillStyle = bg; g.fillRect(0, 0, 512, 512);
+          g.strokeStyle = 'rgba(120,220,255,0.35)'; g.lineWidth = 3;
+          for (let i = 0; i < 5; i++) { g.beginPath(); g.arc(430, 90, 40 + i * 34, 0, Math.PI * 2); g.stroke(); }
+          g.fillStyle = '#ffffff'; g.textBaseline = 'top';
+          g.font = '700 84px "Segoe UI", Arial';
+          g.fillText('intel\u00ae', 40, 60);
+          g.font = '800 60px "Segoe UI", Arial';
+          g.fillText('CORE\u2122 ULTRA', 40, 200);
+          g.font = '900 170px "Segoe UI", Arial';
+          g.fillText('5', 40, 270);
+          g.font = '600 28px "Segoe UI", Arial';
+          g.fillStyle = 'rgba(255,255,255,0.85)';
+          g.fillText('SERIES-2 \u00b7 PROCESSOR', 40, 470);
+        });
+        const boxSideTex = makeCanvas(256, 512, g => {
+          const bg = g.createLinearGradient(0, 0, 0, 512);
+          bg.addColorStop(0, '#075ba6'); bg.addColorStop(1, '#023463');
+          g.fillStyle = bg; g.fillRect(0, 0, 256, 512);
+          g.save(); g.translate(128, 256); g.rotate(-Math.PI / 2);
+          g.fillStyle = 'rgba(255,255,255,0.9)'; g.font = '700 42px "Segoe UI", Arial'; g.textAlign = 'center';
+          g.fillText('intel\u00ae CORE\u2122 ULTRA 5', 0, 14);
+          g.restore();
+        });
+        const boxLidTex = makeCanvas(512, 512, g => {
+          const bg = g.createLinearGradient(0, 0, 512, 512);
+          bg.addColorStop(0, '#0b72c2'); bg.addColorStop(1, '#034a8e');
+          g.fillStyle = bg; g.fillRect(0, 0, 512, 512);
+          g.fillStyle = 'rgba(255,255,255,0.92)'; g.font = '700 72px "Segoe UI", Arial'; g.textBaseline = 'top';
+          g.fillText('intel\u00ae', 40, 60);
+          g.strokeStyle = 'rgba(140,225,255,0.3)'; g.lineWidth = 2;
+          for (let i = 0; i < 7; i++) { g.beginPath(); g.arc(120, 420, 30 + i * 30, 0, Math.PI * 2); g.stroke(); }
+        });
+
+        /* ================= chipset ================= */
+        const chip = new THREE.Group();
+
+        const pcbEdge = new THREE.MeshStandardMaterial({ color: 0x0c1f14, roughness: 0.55, metalness: 0.25 });
+        const pcbTopMat = new THREE.MeshStandardMaterial({ map: pcbTex, roughness: 0.5, metalness: 0.35 });
+        const padMat = new THREE.MeshStandardMaterial({ map: padTex, roughness: 0.35, metalness: 0.9 });
+        const substrate = new THREE.Mesh(
+          new THREE.BoxGeometry(20, 1.6, 20),
+          [pcbEdge, pcbEdge, pcbTopMat, padMat, pcbEdge, pcbEdge]
+        );
+        substrate.castShadow = substrate.receiveShadow = true;
+        chip.add(substrate);
+
+        const metalSide = new THREE.MeshStandardMaterial({ color: 0xc8cdd2, metalness: 1.0, roughness: 0.3 });
+        const ihsTop = new THREE.MeshStandardMaterial({ map: ihsTex, metalness: 0.85, roughness: 0.32 });
+        const ihs = new THREE.Mesh(
+          new THREE.BoxGeometry(16.5, 1.5, 16.5),
+          [metalSide, metalSide, ihsTop, metalSide, metalSide, metalSide]
+        );
+        ihs.position.y = 1.55;
+        ihs.castShadow = true;
+        chip.add(ihs);
+
+        /* tiny SMD capacitors on the underside */
+        const capMat = new THREE.MeshStandardMaterial({ color: 0x8a6d2f, metalness: 0.9, roughness: 0.4 });
+        const capMat2 = new THREE.MeshStandardMaterial({ color: 0x2b2b2b, metalness: 0.6, roughness: 0.5 });
+        const capGeo = new THREE.BoxGeometry(0.8, 0.4, 0.5);
+        for (let i = 0; i < 26; i++) {
+          const cap = new THREE.Mesh(capGeo, Math.random() > 0.5 ? capMat : capMat2);
+          cap.position.set((Math.random() - 0.5) * 16, -1.0, (Math.random() - 0.5) * 16);
+          if (Math.random() > 0.5) cap.rotation.y = Math.PI / 2;
+          chip.add(cap);
+        }
+        scene.add(chip);
+
+        /* ================= retail package ================= */
+        const pkg = new THREE.Group();
+        const boxMats = [];
+        const boxMat = tex => {
+          const m = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.45, metalness: 0.1, transparent: true });
+          boxMats.push(m); return m;
+        };
+        const plainMat = col => {
+          const m = new THREE.MeshStandardMaterial({ color: col, roughness: 0.5, metalness: 0.1, transparent: true });
+          boxMats.push(m); return m;
+        };
+        const BW = 25, BH = 11, BD = 25, TH = 0.8;
+        const addWall = (geo, mat, x, y, z) => {
+          const m = new THREE.Mesh(geo, mat);
+          m.position.set(x, y, z);
+          m.castShadow = m.receiveShadow = true;
+          pkg.add(m); return m;
+        };
+        addWall(new THREE.BoxGeometry(BW, TH, BD), plainMat(0x03407c), 0, TH / 2, 0);                  // bottom
+        addWall(new THREE.BoxGeometry(BW, BH, TH), boxMat(boxFrontTex), 0, BH / 2, (BD - TH) / 2);     // front
+        addWall(new THREE.BoxGeometry(BW, BH, TH), boxMat(boxFrontTex), 0, BH / 2, -(BD - TH) / 2);    // back
+        addWall(new THREE.BoxGeometry(TH, BH, BD), boxMat(boxSideTex), (BW - TH) / 2, BH / 2, 0);      // right
+        addWall(new THREE.BoxGeometry(TH, BH, BD), boxMat(boxSideTex), -(BW - TH) / 2, BH / 2, 0);     // left
+        addWall(new THREE.BoxGeometry(BW - 2, 2, BD - 2), plainMat(0x0a1420), 0, 1.6, 0);              // inner tray
+
+        /* hinged lid */
+        const lidPivot = new THREE.Group();
+        lidPivot.position.set(0, BH, -BD / 2);
+        const lid = new THREE.Mesh(new THREE.BoxGeometry(BW + 0.6, TH, BD + 0.6), boxMat(boxLidTex));
+        lid.position.set(0, 0, BD / 2);
+        lid.castShadow = true;
+        lidPivot.add(lid);
+        pkg.add(lidPivot);
+        scene.add(pkg);
+
+        /* soft contact shadow */
+        const shadowPlane = new THREE.Mesh(
+          new THREE.CircleGeometry(46, 48),
+          new THREE.ShadowMaterial({ opacity: 0.35 })
+        );
+        shadowPlane.rotation.x = -Math.PI / 2;
+        shadowPlane.position.y = 0.02;
+        shadowPlane.receiveShadow = true;
+        scene.add(shadowPlane);
+
+        /* ================= unbox / pack animation ================= */
+        const NEST_Y = 3.6, REVEAL_Y = 26;
+        chip.position.y = NEST_Y;
+        let state = 'closed';
+
+        const tweens = [];
+        const easeInOut = k => k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
+        const easeOutBack = k => {
+          const c1 = 0.9, c3 = c1 + 1;
+          return 1 + c3 * Math.pow(k - 1, 3) + c1 * Math.pow(k - 1, 2);
+        };
+        const tween = (dur, delay, ease, onUpdate, onDone) =>
+          tweens.push({ t0: performance.now() + delay * 1000, dur: dur * 1000, ease, onUpdate, onDone, done: false });
+
+        const setBoxOpacity = v => { for (const m of boxMats) m.opacity = v; };
+
+        const openBox = () => {
+          state = 'opening';
+          hint.textContent = 'Drag to rotate 360\u00b0 \u00b7 click the chip to pack it back';
+          tween(0.9, 0, easeInOut, k => { lidPivot.rotation.x = -2.0 * k; });
+          tween(1.5, 0.35, easeOutBack, k => { chip.position.y = NEST_Y + (REVEAL_Y - NEST_Y) * k; });
+          tween(0.5, 1.7, easeInOut, k => setBoxOpacity(1 - k), () => { pkg.visible = false; state = 'open'; });
+        };
+        const closeBox = () => {
+          state = 'closing';
+          hint.textContent = 'Click the Intel box to unbox the chipset \u2014 drag to rotate 360\u00b0';
+          pkg.visible = true;
+          chip.rotation.y = 0;
+          tween(0.45, 0, easeInOut, k => setBoxOpacity(k));
+          tween(1.3, 0.25, easeInOut, k => { chip.position.y = REVEAL_Y + (NEST_Y - REVEAL_Y) * k; });
+          tween(0.8, 1.5, easeInOut, k => { lidPivot.rotation.x = -2.0 * (1 - k); }, () => { state = 'closed'; });
+        };
+
+        /* ---- click / hover picking ---- */
+        const ray = new THREE.Raycaster();
+        const ptr = new THREE.Vector2();
+        const isChildOf = (obj, root) => { let o = obj; while (o) { if (o === root) return true; o = o.parent; } return false; };
+        const pick = e => {
+          const r = renderer.domElement.getBoundingClientRect();
+          ptr.x = ((e.clientX - r.left) / r.width) * 2 - 1;
+          ptr.y = -((e.clientY - r.top) / r.height) * 2 + 1;
+          ray.setFromCamera(ptr, camera);
+          return ray.intersectObjects(scene.children, true);
+        };
+        let downX = 0, downY = 0;
+        renderer.domElement.addEventListener('pointerdown', e => { downX = e.clientX; downY = e.clientY; });
+        renderer.domElement.addEventListener('pointerup', e => {
+          if (Math.hypot(e.clientX - downX, e.clientY - downY) > 6) return; // orbit drag, not a click
+          const hits = pick(e);
+          if (!hits.length) return;
+          const hitChip = hits.some(h => isChildOf(h.object, chip));
+          const hitBox = hits.some(h => isChildOf(h.object, pkg));
+          if (state === 'closed' && hitBox) openBox();
+          else if (state === 'open' && hitChip) closeBox();
+        });
+        renderer.domElement.addEventListener('pointermove', e => {
+          if (state !== 'closed' && state !== 'open') return;
+          const hits = pick(e);
+          const clickable = hits.some(h =>
+            (state === 'closed' && isChildOf(h.object, pkg)) ||
+            (state === 'open' && isChildOf(h.object, chip)));
+          renderer.domElement.style.cursor = clickable ? 'pointer' : 'grab';
+        });
+
+        /* ---- render loop ---- */
+        const clock = new THREE.Clock();
+        const animate = () => {
+          requestAnimationFrame(animate);
+          const now = performance.now();
+          for (const tw of tweens) {
+            if (tw.done || now < tw.t0) continue;
+            const k = Math.min(1, (now - tw.t0) / tw.dur);
+            tw.onUpdate(tw.ease(k));
+            if (k >= 1) { tw.done = true; if (tw.onDone) tw.onDone(); }
+          }
+          const el = clock.getElapsedTime();
+          if (state === 'open') {
+            chip.position.y = REVEAL_Y + Math.sin(el * 1.4) * 0.5; // gentle float
+            chip.rotation.y += 0.0016;                              // showcase spin
+          }
+          controls.update();
+          renderer.render(scene, camera);
+        };
+        animate();
+
+        window.addEventListener('resize', () => {
+          camera.aspect = stage.clientWidth / stage.clientHeight;
+          camera.updateProjectionMatrix();
+          renderer.setSize(stage.clientWidth, stage.clientHeight);
+        });
+
+        window.__chipset = { get state() { return state; }, THREE, scene };
+      };
+
+      /* lazy-init when the section scrolls into view */
+      const io = new IntersectionObserver(entries => {
+        if (entries[0].isIntersecting) { init(); io.disconnect(); }
+      }, { rootMargin: '400px' });
+      io.observe(stage);
     })();
   </script>
 </body>
