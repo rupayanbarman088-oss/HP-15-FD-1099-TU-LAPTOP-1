@@ -891,7 +891,6 @@
         <li><a href="#">About</a></li>
         <li><a href="#chipset-3d" class="nav-btn">Chipset</a></li>
         <li><a href="#contact" class="nav-btn">Contact</a></li>
-        <li><a href="#rai" class="nav-btn nav-btn-ai">RAI</a></li>
       </ul>
     </div>
   </nav>
@@ -2474,7 +2473,6 @@
       const MOBILE = matchMedia('(pointer: coarse)').matches || innerWidth < 768;
       const COUNT = MOBILE ? 700 : 1500;
       const MAX_BOXES = 24;
-      const R = 15;
 
       let renderer;
       try {
@@ -2490,25 +2488,23 @@
 
       const visibleH = 2 * Math.tan((42 * Math.PI / 180) / 2) * 60;
       const wpp = visibleH / innerHeight;          // world units per CSS pixel
-      const home = { x: 0, y: -visibleH * 0.43 };  // rest at bottom-center of hero
 
       /* ---- palette: red / orange / yellow / purple / blue / pink ---- */
       const PALETTE = ['#ff4d5e', '#ff7b2e', '#ffd23f', '#a855f7', '#4d7cff', '#ff6bb5'];
 
-      /* ---- Fibonacci sphere geometry ---- */
+      /* ---- natural full-screen scatter (no grouped shape, anchored homes) ---- */
       const pos = new Float32Array(COUNT * 3);
       const col = new Float32Array(COUNT * 3);
       const siz = new Float32Array(COUNT);
       const rnd = new Float32Array(COUNT * 4);
-      const GA = Math.PI * (3 - Math.sqrt(5));
+      const off = new Float32Array(COUNT * 3);     // live follower offsets (dynamic)
       const tmp = new THREE.Color();
+      let halfW = innerWidth / 2 * wpp * 1.04;
+      let halfH = innerHeight / 2 * wpp * 1.04;
       for (let i = 0; i < COUNT; i++) {
-        const y = 1 - (i / (COUNT - 1)) * 2;
-        const r = Math.sqrt(Math.max(0, 1 - y * y));
-        const th = GA * i;
-        pos[i * 3] = Math.cos(th) * r * R;
-        pos[i * 3 + 1] = y * R;
-        pos[i * 3 + 2] = Math.sin(th) * r * R;
+        pos[i * 3] = (Math.random() * 2 - 1) * halfW;
+        pos[i * 3 + 1] = (Math.random() * 2 - 1) * halfH;
+        pos[i * 3 + 2] = (Math.random() * 2 - 1) * 8;
         tmp.set(PALETTE[(Math.random() * PALETTE.length) | 0]);
         col[i * 3] = tmp.r; col[i * 3 + 1] = tmp.g; col[i * 3 + 2] = tmp.b;
         siz[i] = 1.4 + Math.random() * 2.2;
@@ -2520,6 +2516,9 @@
       geo.setAttribute('aColor', new THREE.BufferAttribute(col, 3));
       geo.setAttribute('aSize', new THREE.BufferAttribute(siz, 1));
       geo.setAttribute('aRnd', new THREE.BufferAttribute(rnd, 4));
+      const offAttr = new THREE.BufferAttribute(off, 3);
+      offAttr.setUsage(THREE.DynamicDrawUsage);
+      geo.setAttribute('aOff', offAttr);
 
       const uniforms = {
         uTime: { value: 0 },
@@ -2538,6 +2537,7 @@
         attribute vec3 aColor;
         attribute float aSize;
         attribute vec4 aRnd;
+        attribute vec3 aOff;
         uniform float uTime;
         uniform float uBreath;
         uniform float uNoiseAmp;
@@ -2558,7 +2558,8 @@
           p.x += sin(t * (0.32 + aRnd.x * 0.24) + aRnd.y * 6.2831) * uNoiseAmp * (0.5 + aRnd.w);
           p.y += cos(t * (0.28 + aRnd.z * 0.21) + aRnd.x * 6.2831) * uNoiseAmp * (0.5 + aRnd.x);
           p.z += sin(t * (0.25 + aRnd.w * 0.27) + aRnd.z * 6.2831) * uNoiseAmp * (0.5 + aRnd.y);
-          p *= uBreath;
+          /* per-particle follower offset (local swarm around the cursor) */
+          p += aOff;
           /* idle energy sequence: collapse to core, blast outward, reform */
           vec3 dir = normalize(position + vec3(0.0001, 0.0002, 0.0003));
           p *= mix(1.0, 0.035, uGather);
@@ -2610,7 +2611,6 @@
       const points = new THREE.Points(geo, mat);
       const group = new THREE.Group();
       group.add(points);
-      group.position.set(home.x, home.y, 0);
       scene.add(group);
 
       /* ---- UI boxes the particles must never cover ---- */
@@ -2631,21 +2631,21 @@
       setInterval(refreshBoxes, 800);
 
       /* ---- pointer: mouse + touch ---- */
-      const pointer = { x: innerWidth / 2, y: innerHeight * 0.7, last: -1e9 };
-      const onPoint = (x, y) => { pointer.x = x; pointer.y = y; pointer.last = performance.now(); };
+      const pointer = { x: innerWidth / 2, y: innerHeight * 0.7, last: -1e9, moved: false };
+      const onPoint = (x, y) => { pointer.x = x; pointer.y = y; pointer.last = performance.now(); pointer.moved = true; };
       addEventListener('mousemove', e => onPoint(e.clientX, e.clientY), { passive: true });
       addEventListener('touchstart', e => { const t = e.touches[0]; if (t) onPoint(t.clientX, t.clientY); }, { passive: true });
       addEventListener('touchmove', e => { const t = e.touches[0]; if (t) onPoint(t.clientX, t.clientY); }, { passive: true });
 
-      /* ---- spring follow + rotation + breathing (rAF only, no DOM writes) ---- */
-      const vel = { x: 0, y: 0 };
-      const K = REDUCED ? 0.006 : 0.017, DAMP = 0.88;
+      /* ---- local follower swarm: nearest ~12 dots trail the cursor ---- */
+      const FOLLOW_N = MOBILE ? 8 : 12;
+      const active = new Map();        // particle index -> follower spring state
       let t = 0, last = performance.now();
 
-      /* ---- idle energy-blast sequence: gather -> explode -> reform ---- */
+      /* ---- gated idle energy-blast: fires on 1st idle, then every 5th ---- */
       const easeQ = k => k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
-      let idleSeq = -1;               // -1 = inactive
-      const SEQ_LEN = 9.0;            // full cycle period while idle
+      let idleSeq = -1;                // -1 = not playing
+      let idleCount = 0, wasIdle = false;
 
       const tick = () => {
         requestAnimationFrame(tick);
@@ -2654,47 +2654,97 @@
         last = now;
         t += dt;
 
-        /* inertia-eased follow; drift gently around home when idle */
         const idle = now - pointer.last > 3500;
-        const tx = idle ? home.x + Math.cos(t * 0.23) * 4 : (pointer.x - innerWidth / 2) * wpp;
-        const ty = idle ? home.y + Math.sin(t * 0.31) * 2.6 : (innerHeight / 2 - pointer.y) * wpp;
-        vel.x += (tx - group.position.x) * K;
-        vel.y += (ty - group.position.y) * K;
-        vel.x *= DAMP; vel.y *= DAMP;
-        group.position.x += vel.x;
-        group.position.y += vel.y;
+        const cx = (pointer.x - innerWidth / 2) * wpp;
+        const cy = (innerHeight / 2 - pointer.y) * wpp;
 
-        /* idle blast timeline (loops while cursor is idle) */
-        if (idle && !REDUCED) {
-          if (idleSeq < 0) idleSeq = 0;
-          idleSeq = (idleSeq + dt) % SEQ_LEN;
+        /* count idle spells; launch the blast on the 1st and every 5th idle */
+        if (idle && !wasIdle) {
+          wasIdle = true;
+          idleCount++;
+          if ((idleCount === 1 || idleCount % 5 === 0) && !REDUCED && idleSeq < 0) {
+            idleSeq = 0;
+            for (const f of active.values()) f.mode = 'return';   // release followers
+          }
+        }
+        if (!idle) wasIdle = false;
+
+        /* re-pick the nearest homes once per pointer move (field stays anchored) */
+        if (pointer.moved) {
+          pointer.moved = false;
+          if (!idle) {
+            const best = [];
+            for (let i = 0; i < COUNT; i++) {
+              const dx = pos[i * 3] - cx, dy = pos[i * 3 + 1] - cy;
+              const d2 = dx * dx + dy * dy;
+              if (best.length < FOLLOW_N) {
+                best.push([d2, i]);
+                best.sort((a, b) => a[0] - b[0]);
+              } else if (d2 < best[FOLLOW_N - 1][0]) {
+                best[FOLLOW_N - 1] = [d2, i];
+                best.sort((a, b) => a[0] - b[0]);
+              }
+            }
+            const picked = new Set();
+            best.forEach((b, rank) => {
+              picked.add(b[1]);
+              let f = active.get(b[1]);
+              if (!f) { f = { ox: 0, oy: 0, vx: 0, vy: 0, ang: 0 }; active.set(b[1], f); }
+              f.mode = 'follow'; f.rank = rank;
+              f.ang = (rank / FOLLOW_N) * Math.PI * 2;
+            });
+            for (const [i, f] of active) if (!picked.has(i)) f.mode = 'return';
+          }
+        }
+        if (idle) for (const f of active.values()) f.mode = 'return';   // cursor stopped -> go home
+
+        /* spring the followers (soft staggered trail) and the returners */
+        if (active.size) {
+          const done = [];
+          for (const [i, f] of active) {
+            let tx, ty, k;
+            if (f.mode === 'follow' && idleSeq < 0) {
+              const r = 1.6 + f.rank * 0.55;
+              tx = cx + Math.cos(f.ang + t * 0.7) * r;
+              ty = cy + Math.sin(f.ang + t * 0.7) * r;
+              k = REDUCED ? 0.02 : 0.062 - f.rank * 0.0038;   // staggered lag = trail
+            } else {
+              tx = pos[i * 3]; ty = pos[i * 3 + 1]; k = 0.05; // return to home spot
+            }
+            f.vx = (f.vx + (tx - (pos[i * 3] + f.ox)) * k) * 0.86;
+            f.vy = (f.vy + (ty - (pos[i * 3 + 1] + f.oy)) * k) * 0.86;
+            f.ox += f.vx; f.oy += f.vy;
+            if (f.mode === 'return' && f.ox * f.ox + f.oy * f.oy < 0.04 && f.vx * f.vx + f.vy * f.vy < 0.001) done.push(i);
+            off[i * 3] = f.ox; off[i * 3 + 1] = f.oy;
+          }
+          for (const i of done) { off[i * 3] = 0; off[i * 3 + 1] = 0; active.delete(i); }
+          offAttr.needsUpdate = true;
+        }
+
+        /* idle blast timeline: gather -> explode -> reform (plays once per trigger) */
+        if (idleSeq >= 0) {
+          idleSeq += dt;
           const s = idleSeq;
           let g = 0, b = 0;
           if (s < 1.5) {
             g = easeQ(Math.min(1, s / 1.5));                       // gather to core
           } else if (s < 1.75) {
-            g = 1; b = (s - 1.5) / 0.25;                            // detonate
+            g = 1; b = (s - 1.5) / 0.25;                           // detonate
           } else if (s < 3.9) {
-            const k = (s - 1.75) / 2.15;                            // reform sphere
+            const k = (s - 1.75) / 2.15;                           // reform scatter
             b = 1 - easeQ(k);
             g = 1 - easeQ(Math.min(1, k * 1.25));
+          } else {
+            idleSeq = -1;                                          // sequence finished
           }
           uniforms.uGather.value = g;
           uniforms.uBlast.value = b * b;
-          uniforms.uFlash.value = Math.exp(-Math.pow((s - 1.68) / 0.28, 2));
+          uniforms.uFlash.value = idleSeq >= 0 ? Math.exp(-Math.pow((s - 1.68) / 0.28, 2)) : 0;
         } else {
-          idleSeq = -1;
           uniforms.uGather.value *= 0.82;   // smooth return on mouse move
           uniforms.uBlast.value *= 0.82;
           uniforms.uFlash.value *= 0.8;
         }
-
-        /* pointer-driven 3D tilt + slow ambient spin */
-        const nx = pointer.x / innerWidth - 0.5;
-        const ny = pointer.y / innerHeight - 0.5;
-        points.rotation.y += REDUCED ? 0.0005 : 0.0016;
-        group.rotation.x += ((-ny * 0.45) - group.rotation.x) * 0.05;
-        group.rotation.y += ((nx * 0.65) - group.rotation.y) * 0.05;
 
         /* breathing */
         uniforms.uBreath.value = 1 + Math.sin(t * 0.85) * (REDUCED ? 0.012 : 0.05);
@@ -2710,10 +2760,19 @@
         camera.updateProjectionMatrix();
         uniforms.uResolution.value.set(innerWidth, innerHeight);
         uniforms.uPixelRatio.value = renderer.getPixelRatio();
+        /* keep the scatter covering the new viewport */
+        const wppNow = visibleH / innerHeight;
+        const nw = innerWidth / 2 * wppNow * 1.04, nh = innerHeight / 2 * wppNow * 1.04;
+        for (let i = 0; i < COUNT; i++) {
+          pos[i * 3] *= nw / halfW;
+          pos[i * 3 + 1] *= nh / halfH;
+        }
+        halfW = nw; halfH = nh;
+        geo.attributes.position.needsUpdate = true;
         refreshBoxes();
       });
 
-      window.__field = { group, uniforms, COUNT, MOBILE, REDUCED };
+      window.__field = { group, uniforms, COUNT, MOBILE, REDUCED, idleCount: () => idleCount, followers: () => active.size };
     })();
   </script>
 </body>
