@@ -172,7 +172,7 @@
       transition: color 0.3s, filter 0.3s;
     }
     .fan-spin.turbo {
-      animation-duration: 0.3s; /* 10x speed on click */
+      animation-duration: 0.3s; /* 10x speed on click (lasts 10s) */
       color: #00f5ff !important;
       filter: drop-shadow(0 0 12px #00f5ff);
     }
@@ -183,11 +183,48 @@
       font-weight: 600;
       text-shadow: 0 0 10px rgba(0,245,255,0.55);
       animation: hint-pulse 2s ease-in-out infinite;
+      transition: color .8s ease, text-shadow .8s ease;
     }
     @keyframes hint-pulse {
       0%, 100% { opacity: 1; }
       50%      { opacity: 0.55; }
     }
+
+    /* ---------- fire theme (10s turbo mode) ---------- */
+    #fire-overlay {
+      position: fixed; inset: 0;
+      z-index: 6;
+      pointer-events: none;
+      background:
+        radial-gradient(ellipse at 15% 0%, rgba(255,80,0,0.30), transparent 55%),
+        radial-gradient(ellipse at 85% 100%, rgba(255,140,0,0.25), transparent 55%),
+        radial-gradient(ellipse at 50% 50%, rgba(255,60,0,0.12), transparent 75%);
+      opacity: 0;
+      transition: opacity 1.2s ease;
+    }
+    body.fire-theme #fire-overlay { opacity: 1; }
+    body { transition: background-color 1.2s ease; }
+    body.fire-theme { background-color: #160903; }
+
+    /* accent elements shift to fire colors */
+    .fan-spin { transition: color .8s ease, filter .8s ease; }
+    body.fire-theme .fan-spin.turbo {
+      color: #ff7a1a !important;
+      filter: drop-shadow(0 0 16px #ff5500);
+    }
+    #rpm-ring { transition: stroke-dashoffset 0.6s cubic-bezier(0.22, 1, 0.36, 1), stroke .8s ease; }
+    body.fire-theme #rpm-ring { stroke: #ff7a1a; }
+    .rpm-value { transition: color .8s ease, text-shadow .8s ease; }
+    body.fire-theme .rpm-value { color: #ff8c2e; text-shadow: 0 0 8px rgba(255,90,0,0.7); }
+    .site-nav-logo { transition: text-shadow .8s ease; }
+    body.fire-theme .site-nav-logo { text-shadow: 0 0 14px rgba(255,100,0,0.8); }
+    .site-nav-links a:hover { color: #00f5ff; }
+    body.fire-theme .site-nav-links a:hover { color: #ff8c2e; }
+    body.fire-theme .fan-hint { color: #ff8c2e; text-shadow: 0 0 10px rgba(255,90,0,0.7); }
+    .welcome-title { transition: text-shadow 1s ease; }
+    body.fire-theme .welcome-title { text-shadow: 0 0 20px rgba(255,100,0,0.85), 0 0 50px rgba(255,60,0,0.5); }
+    body.fire-theme .glass-panel { border-color: rgba(255,110,30,0.35); }
+    body.fire-theme .glass-panel:hover { border-color: rgba(255,140,50,0.6); }
 
     /* ---------- live graph ---------- */
     @keyframes graph-slide {
@@ -421,6 +458,9 @@
   </style>
 </head>
 <body>
+
+  <!-- Fire-theme glow overlay (visible during 10s turbo mode) -->
+  <div id="fire-overlay"></div>
 
   <!-- Loading overlay -->
   <div id="loader">
@@ -966,7 +1006,7 @@
   </div>
 
   <script>
-    /* ---- Fan turbo click + RPM meter ---- */
+    /* ---- Fan turbo click + RPM meter + 10s fire theme ---- */
     (() => {
       const fan = document.querySelector('.fan-spin');
       const rpmRing = document.getElementById('rpm-ring');
@@ -979,12 +1019,17 @@
         if (rpmValue) rpmValue.textContent = rpm;
       };
       fan.addEventListener('click', () => {
-        fan.classList.add('turbo');
+        fan.classList.add('turbo');            // 10x spin speed
+        document.body.classList.add('fire-theme'); // fire red/orange glow
         setRPM(300);
         clearTimeout(turboTimer);
         clearTimeout(rpmTimer);
-        turboTimer = setTimeout(() => fan.classList.remove('turbo'), 3000);
-        rpmTimer = setTimeout(() => setRPM(100), 3000);
+        // after exactly 10 seconds: back to 3x speed + original theme
+        turboTimer = setTimeout(() => {
+          fan.classList.remove('turbo');
+          document.body.classList.remove('fire-theme');
+        }, 10000);
+        rpmTimer = setTimeout(() => setRPM(100), 10000);
       });
       setRPM(100); // initialize at 100 RPM
     })();
