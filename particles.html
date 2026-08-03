@@ -9,16 +9,40 @@
     html, body, #root { height: 100%; }
     body {
       overflow: hidden;
-      background: #faf7f2;
+      background:
+        radial-gradient(ellipse at 50% 38%, rgba(0,180,255,0.10), transparent 62%),
+        radial-gradient(ellipse at 85% 90%, rgba(168,85,247,0.08), transparent 55%),
+        #05080f;
       font-family: 'Segoe UI', system-ui, sans-serif;
       user-select: none;
     }
+
+    /* ---------- futuristic blueprint grid ---------- */
+    .grid-bg {
+      position: fixed; inset: 0;
+      background-image:
+        linear-gradient(rgba(0,229,255,0.055) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,229,255,0.055) 1px, transparent 1px),
+        linear-gradient(rgba(0,229,255,0.13) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,229,255,0.13) 1px, transparent 1px);
+      background-size: 36px 36px, 36px 36px, 180px 180px, 180px 180px;
+      -webkit-mask-image: radial-gradient(ellipse at 50% 45%, black 30%, rgba(0,0,0,0.3) 85%);
+      mask-image: radial-gradient(ellipse at 50% 45%, black 30%, rgba(0,0,0,0.3) 85%);
+      animation: grid-pulse 6s ease-in-out infinite;
+      pointer-events: none;
+    }
+    @keyframes grid-pulse {
+      0%, 100% { opacity: 0.95; }
+      50%      { opacity: 0.6; }
+    }
+
     .particle-canvas {
       position: fixed; inset: 0;
       width: 100%; height: 100%;
       display: block;
       cursor: crosshair;
     }
+
     .topbar {
       position: fixed; top: 0; left: 0; right: 0;
       display: flex; align-items: center; justify-content: space-between;
@@ -27,32 +51,34 @@
     }
     .brand {
       font-weight: 800; letter-spacing: 4px; font-size: 14px;
-      color: #2b2440;
+      color: #e8f4ff;
       pointer-events: auto;
     }
     .brand span {
-      background: linear-gradient(90deg, #ec4899, #a855f7);
+      background: linear-gradient(90deg, #00f5ff, #a855f7);
       -webkit-background-clip: text; background-clip: text; color: transparent;
+      text-shadow: none;
     }
     .back-link {
       pointer-events: auto;
-      color: #6d6486; text-decoration: none;
+      color: rgba(232,244,255,0.65); text-decoration: none;
       font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
-      padding: 8px 14px; border: 1px solid rgba(120,100,160,0.25);
-      border-radius: 999px; background: rgba(255,255,255,0.55);
+      padding: 8px 14px; border: 1px solid rgba(0,229,255,0.25);
+      border-radius: 999px; background: rgba(10,14,23,0.5);
       backdrop-filter: blur(6px);
       transition: all .3s;
     }
     .back-link:hover {
-      color: #a855f7; border-color: rgba(168,85,247,0.5);
-      box-shadow: 0 0 16px rgba(168,85,247,0.18);
+      color: #00f5ff; border-color: rgba(0,245,255,0.55);
+      box-shadow: 0 0 16px rgba(0,245,255,0.25);
     }
     .hint {
       position: fixed; bottom: 26px; left: 50%;
       transform: translateX(-50%);
       z-index: 10; pointer-events: none;
       font-size: 11px; letter-spacing: 3px; text-transform: uppercase;
-      color: rgba(90,70,120,0.55);
+      color: rgba(0,245,255,0.6);
+      text-shadow: 0 0 10px rgba(0,245,255,0.35);
       animation: hint-pulse 2.4s ease-in-out infinite;
       text-align: center; white-space: nowrap;
     }
@@ -61,9 +87,9 @@
       position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
       z-index: 10; pointer-events: none;
       font-size: 10px; letter-spacing: 2.5px; text-transform: uppercase;
-      color: rgba(90,70,120,0.4);
+      color: rgba(232,244,255,0.35);
     }
-    .counter b { color: #ec4899; }
+    .counter b { color: #fde047; }
   </style>
 </head>
 <body>
@@ -75,15 +101,14 @@
   <script crossorigin="anonymous" integrity="sha384-x/ilTFv/u/eu6YSmkFDZl5V5Mm/pkxxcVv2cVJOrr1J0rvILhMvRBCy6yA75wYBj" src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
 
   <script type="text/babel" data-presets="env,react">
-    const { useRef, useEffect, useState } = React;
+    const { useRef, useEffect } = React;
 
-    /* pastel palette: pinks, purples, yellows */
+    /* vibrant palette: cyan, purple, yellow */
     const PALETTE = [
-      '#ff6b9d', '#ff8fab', '#f472b6', '#fb7185',   // pinks
-      '#a78bfa', '#8b5cf6', '#c084fc', '#7c3aed',   // purples
-      '#fbbf24', '#facc15', '#fde047', '#f59e0b'    // yellows
+      '#00f5ff', '#22d3ee', '#67e8f9', '#06b6d4',   // cyan
+      '#a855f7', '#c084fc', '#8b5cf6', '#d946ef',   // purple
+      '#fde047', '#facc15', '#fbbf24', '#f59e0b'    // yellow
     ];
-    const BG = { r: 250, g: 247, b: 242 };           // clean minimalist canvas
     const COUNT = 420;
 
     function ParticleField() {
@@ -101,21 +126,21 @@
           W = window.innerWidth; H = window.innerHeight;
           canvas.width = W * DPR; canvas.height = H * DPR;
           ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-          ctx.fillStyle = `rgb(${BG.r},${BG.g},${BG.b})`;
-          ctx.fillRect(0, 0, W, H);
         };
         resize();
 
-        /* ---- spawn particles ---- */
+        /* ---- spawn particles: each has its own spring stiffness (lag) ---- */
         const particles = Array.from({ length: COUNT }, () => ({
           x: Math.random() * W,
           y: Math.random() * H,
           vx: (Math.random() - 0.5) * 0.3,
           vy: (Math.random() - 0.5) * 0.3,
-          r: 1.1 + Math.random() * 2.4,
+          r: 1.1 + Math.random() * 2.3,
           color: PALETTE[(Math.random() * PALETTE.length) | 0],
-          pull: 0.5 + Math.random(),          // individual attraction strength
-          phase: Math.random() * Math.PI * 2  // drift wobble phase
+          k: 0.0012 + Math.random() * 0.0033,   // spring stiffness -> varied lag
+          damp: 0.92 + Math.random() * 0.045,   // damping -> smooth follow
+          swirl: 0.25 + Math.random() * 0.75,
+          phase: Math.random() * Math.PI * 2    // drift wobble phase
         }));
 
         /* ---- pointer tracking ---- */
@@ -136,29 +161,30 @@
         const tick = () => {
           t += 0.008;
 
-          /* soft trail: translucent wash of the background color */
-          ctx.fillStyle = `rgba(${BG.r},${BG.g},${BG.b},0.16)`;
+          /* fade previous frame toward transparency -> soft trails over the grid */
+          ctx.globalCompositeOperation = 'destination-out';
+          ctx.fillStyle = 'rgba(0,0,0,0.16)';
           ctx.fillRect(0, 0, W, H);
+          ctx.globalCompositeOperation = 'source-over';
 
           for (const p of particles) {
             if (mouse.active) {
-              /* spring toward the pointer */
+              /* lagging spring toward the cursor */
               const dx = mouse.x - p.x;
               const dy = mouse.y - p.y;
               const d  = Math.hypot(dx, dy) || 1;
-              const f  = Math.min(0.09, (0.55 * p.pull) / d);
-              p.vx += dx * f * 0.22;
-              p.vy += dy * f * 0.22;
-              /* gentle swirl around the cursor */
-              p.vx += -dy / d * 0.05 * p.pull;
-              p.vy +=  dx / d * 0.05 * p.pull;
-              p.vx *= 0.93; p.vy *= 0.93;   // damping = smooth follow
+              p.vx += dx * p.k;
+              p.vy += dy * p.k;
+              /* subtle orbit swirl around the cursor */
+              p.vx += (-dy / d) * 0.035 * p.swirl;
+              p.vy += ( dx / d) * 0.035 * p.swirl;
+              p.vx *= p.damp;
+              p.vy *= p.damp;
             } else {
               /* zero-gravity drift with slow wobble */
               p.vx += Math.cos(t * 2 + p.phase) * 0.004;
               p.vy += Math.sin(t * 1.6 + p.phase * 1.3) * 0.004;
               p.vx *= 0.995; p.vy *= 0.995;
-              /* keep drift lazy */
               const sp = Math.hypot(p.vx, p.vy);
               if (sp > 0.45) { p.vx *= 0.45 / sp; p.vy *= 0.45 / sp; }
             }
@@ -171,13 +197,13 @@
             if (p.x < -m) p.x = W + m; else if (p.x > W + m) p.x = -m;
             if (p.y < -m) p.y = H + m; else if (p.y > H + m) p.y = -m;
 
-            /* halo + dot */
-            ctx.globalAlpha = 0.16;
+            /* glow halo + dot */
+            ctx.globalAlpha = 0.18;
             ctx.fillStyle = p.color;
             ctx.beginPath();
-            ctx.arc(p.x, p.y, p.r * 2.4, 0, Math.PI * 2);
+            ctx.arc(p.x, p.y, p.r * 2.6, 0, Math.PI * 2);
             ctx.fill();
-            ctx.globalAlpha = 0.92;
+            ctx.globalAlpha = 0.95;
             ctx.beginPath();
             ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
             ctx.fill();
@@ -204,6 +230,7 @@
     function App() {
       return (
         <React.Fragment>
+          <div className="grid-bg" />
           <ParticleField />
           <div className="topbar">
             <div className="brand">HP INTEL <span>SYSTEM</span></div>
