@@ -1,0 +1,1212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HP INTEL SYSTEM | Scroll Animation</title>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500&family=Sora:wght@600;700&family=Geist:wght@400&display=swap" rel="stylesheet"/>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "primary-container":"#00f5ff","tertiary":"#fdf9fa","tertiary-fixed":"#e5e2e3","error":"#ffb4ab",
+            "surface-container-low":"#1b1b1e","on-secondary-fixed":"#320046","background":"#131316",
+            "surface-dim":"#131316","secondary-fixed-dim":"#ecb1ff","inverse-surface":"#e4e1e5",
+            "surface-tint":"#00dce5","on-tertiary-fixed":"#1c1b1c","primary-fixed":"#63f7ff",
+            "on-secondary-container":"#480063","secondary":"#ecb1ff","on-secondary-fixed-variant":"#75009e",
+            "tertiary-container":"#e0ddde","surface-container-highest":"#353438","surface-variant":"#353438",
+            "on-surface":"#e4e1e5","on-error-container":"#ffdad6","surface-bright":"#39393c",
+            "on-primary-container":"#006c71","on-primary-fixed-variant":"#004f53","outline":"#849495",
+            "outline-variant":"#3a494a","on-error":"#690005","on-tertiary-fixed-variant":"#474647",
+            "on-primary-fixed":"#002021","secondary-fixed":"#f9d8ff","error-container":"#93000a",
+            "on-background":"#e4e1e5","on-tertiary-container":"#626162","on-primary":"#003739",
+            "secondary-container":"#d05bff","surface-container-high":"#2a2a2d","primary-fixed-dim":"#00dce5",
+            "primary":"#e9feff","on-secondary":"#520070","surface-container-lowest":"#0e0e11",
+            "inverse-primary":"#00696e","surface-container":"#1f1f22","tertiary-fixed-dim":"#c8c6c7",
+            "surface":"#131316","on-tertiary":"#313031","on-surface-variant":"#b9caca","inverse-on-surface":"#303033"
+          },
+          borderRadius: { DEFAULT:"0.125rem",lg:"0.25rem",xl:"0.5rem",full:"0.75rem" },
+          spacing: { "margin-desktop":"64px","container-max":"1440px","gutter":"24px","margin-mobile":"20px","grid-unit":"8px" },
+          fontFamily: { "label-sm":["JetBrains Mono"],"headline-lg":["Sora"],"display-lg":["Sora"],"headline-lg-mobile":["Sora"],"body-md":["Geist"] },
+          fontSize: {
+            "label-sm":["12px",{lineHeight:"16px",letterSpacing:"0.1em",fontWeight:"500"}],
+            "headline-lg":["32px",{lineHeight:"40px",letterSpacing:"0.01em",fontWeight:"600"}],
+            "display-lg":["48px",{lineHeight:"56px",letterSpacing:"0.02em",fontWeight:"700"}],
+            "headline-lg-mobile":["24px",{lineHeight:"32px",fontWeight:"600"}],
+            "body-md":["16px",{lineHeight:"24px",fontWeight:"400"}]
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html { scroll-behavior: auto; }
+
+    body {
+      background: #0a0a0a;
+      color: #fff;
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      overflow-x: hidden;
+    }
+
+    /* ---------- loading overlay ---------- */
+    #loader {
+      position: fixed; inset: 0; z-index: 100;
+      background: #0a0a0a;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      transition: opacity .6s ease;
+    }
+    #loader.hidden { opacity: 0; pointer-events: none; }
+    #loader h2 { font-weight: 400; font-size: 1.25rem; margin-bottom: 1.5rem; letter-spacing: .08em; }
+    .progress-bar { width: 240px; height: 4px; background: #222; border-radius: 2px; overflow: hidden; }
+    .progress-bar-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #6366f1, #a855f7); transition: width .15s; }
+
+    @keyframes spin-fan {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    /* ---------- welcome headline at the top of the page ---------- */
+    /* ---------- transparent navigation bar ---------- */
+    .site-nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 45;
+      background: rgba(10,10,10,0.4);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .site-nav-inner {
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: 0 1.25rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 56px;
+    }
+    .site-nav-logo {
+      font-family: 'Sora', sans-serif;
+      font-weight: 700;
+      font-size: 14px;
+      letter-spacing: 0.12em;
+      color: #fff;
+      text-shadow: 0 0 12px rgba(0,245,255,0.5);
+    }
+    .site-nav-links {
+      display: flex;
+      gap: 1.5rem;
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+    .site-nav-links a {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      color: rgba(255,255,255,0.65);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    .site-nav-links a:hover {
+      color: #00f5ff;
+    }
+
+    /* ---------- RPM meter ---------- */
+    .rpm-meter {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      z-index: 20;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+    }
+    .rpm-ring {
+      transition: stroke-dashoffset 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .rpm-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 7px;
+      letter-spacing: 0.1em;
+      color: rgba(255,255,255,0.5);
+    }
+    .rpm-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      font-weight: 600;
+      color: #00f5ff;
+      text-shadow: 0 0 8px rgba(0,245,255,0.6);
+    }
+
+    .welcome-title {
+      position: absolute;
+      top: 6vh;
+      left: 0; right: 0;
+      z-index: 3;
+      text-align: center;
+      font-family: 'Sora', sans-serif;
+      font-weight: 700;
+      font-size: clamp(24px, 4.5vw, 56px);
+      letter-spacing: 0.14em;
+      color: #fff;
+      text-shadow: 0 0 18px rgba(0,245,255,0.65), 0 0 46px rgba(168,85,247,0.4);
+      pointer-events: none;
+    }
+    .fan-spin {
+      animation: spin-fan 1s linear infinite; /* 3x speed always (base was 3s) */
+      cursor: pointer;
+      transition: color 0.3s, filter 0.3s;
+    }
+    .fan-spin.turbo {
+      animation-duration: 0.3s; /* 10x speed on click */
+      color: #00f5ff !important;
+      filter: drop-shadow(0 0 12px #00f5ff);
+    }
+
+    /* highlighted "click the fan" hint */
+    .fan-hint {
+      color: #00f5ff;
+      font-weight: 600;
+      text-shadow: 0 0 10px rgba(0,245,255,0.55);
+      animation: hint-pulse 2s ease-in-out infinite;
+    }
+    @keyframes hint-pulse {
+      0%, 100% { opacity: 1; }
+      50%      { opacity: 0.55; }
+    }
+
+    /* ---------- live graph ---------- */
+    @keyframes graph-slide {
+      from { transform: translateX(0); }
+      to   { transform: translateX(-50%); }
+    }
+    .graph-track {
+      display: flex;
+      width: 200%;
+      animation: graph-slide 6s linear infinite;
+    }
+    .graph-track svg { flex-shrink: 0; width: 50%; height: 100%; }
+
+    @keyframes bar-pulse {
+      0%, 100% { opacity: .55; }
+      50%       { opacity: 1; }
+    }
+    .bar-anim { animation: bar-pulse 2s ease-in-out infinite; }
+    .bar-anim:nth-child(2) { animation-delay: .3s; }
+    .bar-anim:nth-child(3) { animation-delay: .6s; }
+    .bar-anim:nth-child(4) { animation-delay: .9s; }
+    .bar-anim:nth-child(5) { animation-delay: 1.2s; }
+
+    @keyframes dot-blink {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.2; }
+    }
+    .dot-blink { animation: dot-blink 1.4s ease-in-out infinite; }
+    .dot-blink:nth-child(2) { animation-delay: .5s; }
+    .dot-blink:nth-child(3) { animation-delay: 1s; }
+
+    /* ---------- scroll animation area ---------- */
+    #scroll-area {
+      position: relative;
+      /* Height set by JS to exactly 5% of total page height */
+      height: 100vh;
+      background: #0a0a0a;
+    }
+
+    #canvas-wrapper {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      background: #0a0a0a;
+    }
+
+    canvas {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+    }
+
+    /* ---------- progress pill ---------- */
+    #scroll-progress {
+      position: fixed; top: 1.25rem; right: 1.25rem;
+      background: rgba(255,255,255,.08);
+      backdrop-filter: blur(8px);
+      padding: .4rem .9rem;
+      border-radius: 999px;
+      font-size: .75rem;
+      letter-spacing: .06em;
+      color: #aaa;
+      z-index: 50;
+      opacity: 0;
+      transition: opacity .3s;
+    }
+    #scroll-progress.visible { opacity: 1; }
+
+    /* ---------- frame counter ---------- */
+    #frame-counter {
+      position: fixed; bottom: 1.25rem; right: 1.25rem;
+      background: rgba(255,255,255,.06);
+      backdrop-filter: blur(8px);
+      padding: .35rem .8rem;
+      border-radius: 999px;
+      font-size: .7rem;
+      color: #666;
+      z-index: 50;
+      opacity: 0;
+      transition: opacity .3s;
+    }
+    #frame-counter.visible { opacity: 1; }
+
+    /* ---------- multitasking marquee ---------- */
+    @keyframes marquee-rtl {
+      from { transform: translateX(0); }
+      to   { transform: translateX(-50%); }
+    }
+    .marquee-track {
+      display: flex;
+      width: max-content;
+      animation: marquee-rtl 28s linear infinite;
+    }
+    .marquee-track:hover { animation-play-state: paused; }
+    .app-window {
+      flex-shrink: 0;
+      width: 340px;
+      border-radius: 14px;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(18,18,26,0.85);
+      backdrop-filter: blur(16px);
+      transition: transform .35s ease, box-shadow .35s ease, border-color .35s ease;
+      cursor: default;
+    }
+    .app-window:hover {
+      transform: translateY(-6px) scale(1.025);
+      box-shadow: 0 24px 60px rgba(0,0,0,0.55), 0 0 0 1px rgba(0,245,255,0.25);
+      border-color: rgba(0,245,255,0.3);
+    }
+    .win-titlebar {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 14px;
+      background: rgba(255,255,255,0.04);
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .win-dot {
+      width: 11px; height: 11px;
+      border-radius: 50%;
+    }
+    .win-body {
+      padding: 14px;
+      min-height: 180px;
+    }
+    .nebula-wrapper {
+      background-color: #131316;
+      color: #e4e1e5;
+      background-image: linear-gradient(#3a494a 1px, transparent 1px),
+        linear-gradient(90deg, #3a494a 1px, transparent 1px);
+      background-size: 40px 40px;
+      background-position: center center;
+      position: relative;
+      margin-top: 0;
+      padding-top: 0;
+    }
+    /* Fade in from the scroll animation's black background */
+    .nebula-wrapper::after {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 120px;
+      background: linear-gradient(to bottom, #0a0a0a, transparent);
+      pointer-events: none;
+      z-index: 1;
+    }
+    .nebula-wrapper .glass-panel {
+      background: rgba(26,26,29,0.6);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    .nebula-wrapper .glass-panel-elevated {
+      background: rgba(26,26,29,0.8);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border: 1px solid #00f5ff;
+      box-shadow: 0 0 20px rgba(0,245,255,0.15);
+    }
+    .nebula-wrapper .glow-text {
+      text-shadow: 0 0 10px #00f5ff;
+    }
+
+    /* ---------- Intel Arc GPU die ---------- */
+    @keyframes core-pulse {
+      0%, 100% { background: rgba(0,245,255,0.10); box-shadow: none; }
+      50%      { background: rgba(0,245,255,0.72); box-shadow: 0 0 14px rgba(0,245,255,0.9); }
+    }
+    .xe-core {
+      width: 26px; height: 26px; border-radius: 4px;
+      border: 1px solid rgba(0,245,255,0.35);
+      animation: core-pulse 2.4s ease-in-out infinite;
+    }
+    @keyframes ring-spin {
+      from { transform: rotate(0deg); }
+      to   { transform: rotate(360deg); }
+    }
+    .arc-ring {
+      animation: ring-spin 16s linear infinite;
+      border-style: dashed;
+    }
+
+    /* ---------- scroll reveal ---------- */
+    .reveal {
+      opacity: 0;
+      transform: translateY(46px);
+      transition: opacity .8s cubic-bezier(.22,.61,.36,1), transform .8s cubic-bezier(.22,.61,.36,1);
+    }
+    .reveal.revealed { opacity: 1; transform: translateY(0); }
+    @keyframes orb-float {
+      0%, 100% { transform: translateY(0) scale(1); }
+      50%      { transform: translateY(-26px) scale(1.08); }
+    }
+    .glow-orb { animation: orb-float 6s ease-in-out infinite; }
+
+    /* ---------- laptop workspace popups ---------- */
+    .popup-win {
+      position: absolute;
+      z-index: 10;
+      border-radius: 8px;
+      background: rgba(18,22,32,0.92);
+      border: 1px solid rgba(255,255,255,0.14);
+      box-shadow: 0 12px 32px rgba(0,0,0,0.55);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      animation: win-float 6s ease-in-out infinite;
+    }
+    .popup-titlebar {
+      display: flex; align-items: center; gap: 4px;
+      padding: 4px 8px;
+      background: rgba(255,255,255,0.05);
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+      border-radius: 8px 8px 0 0;
+    }
+    .popup-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .popup-title {
+      margin-left: 6px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 8px; letter-spacing: .08em;
+      color: #9fb3b3;
+    }
+    @keyframes win-float {
+      0%, 100% { transform: translateY(0); }
+      50%      { transform: translateY(-5px); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Loading overlay -->
+  <div id="loader">
+    <h2>Loading frames&hellip;</h2>
+    <div class="progress-bar"><div class="progress-bar-fill" id="progress-fill"></div></div>
+  </div>
+
+  <!-- Scroll progress -->
+  <div id="scroll-progress">0 %</div>
+  <div id="frame-counter">0 / 0</div>
+
+  <!-- Transparent navigation bar -->
+  <nav class="site-nav">
+    <div class="site-nav-inner">
+      <div class="site-nav-logo">HP INTEL SYSTEM</div>
+      <ul class="site-nav-links">
+        <li><a href="#">Home</a></li>
+        <li><a href="#">Features</a></li>
+        <li><a href="#">Specs</a></li>
+        <li><a href="#">About</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- Animation -->
+  <div id="scroll-area">
+    <div id="canvas-wrapper">
+      <h1 id="welcome-title" class="welcome-title">WELCOME TO HP WORLD</h1>
+      <canvas id="canvas"></canvas>
+    </div>
+  </div>
+
+  <!-- Outro + HP INTEL SYSTEM Sections -->
+  <div class="nebula-wrapper" style="margin-top:-1px;">
+    <!-- Feature Bento Grid -->
+    <main class="flex-grow pt-16 pb-24 px-5 md:px-16 max-w-[1440px] mx-auto w-full relative">
+      <section class="grid grid-cols-1 md:grid-cols-12 gap-6 mb-32">
+        <!-- Feature 1: Laptop Workspace Screen -->
+        <div class="md:col-span-8 glass-panel rounded-xl p-8 relative overflow-hidden group hover:border-primary-container/50 transition-colors duration-500 min-h-[400px] flex flex-col items-center justify-center">
+          <div class="absolute top-0 right-0 w-64 h-64 bg-primary-container/10 rounded-full blur-[100px] group-hover:bg-primary-container/20 transition-all duration-700"></div>
+
+          <!-- Laptop mockup -->
+          <div class="relative z-10 w-full max-w-[680px]">
+            <!-- Screen -->
+            <div class="relative rounded-t-[14px] border-[8px] border-[#17171a] bg-black overflow-hidden shadow-[0_30px_70px_rgba(0,0,0,0.55)]" style="aspect-ratio:16/10;">
+              <!-- webcam -->
+              <div class="absolute top-[3px] left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-[#2e2e33] z-20"></div>
+              <!-- Desktop -->
+              <div class="absolute inset-0 bg-gradient-to-br from-[#0a1220] via-[#101a2e] to-[#1c1030]">
+
+                <!-- Popup: Weather -->
+                <div class="popup-win" style="top:7%; left:4%; width:34%;">
+                  <div class="popup-titlebar"><span class="popup-dot" style="background:#ff5f57"></span><span class="popup-dot" style="background:#ffbd2e"></span><span class="popup-dot" style="background:#28c840"></span><span class="popup-title">weather</span></div>
+                  <div class="p-2">
+                    <div class="flex items-center justify-between">
+                      <div>
+                        <div class="font-headline-lg text-on-surface" style="font-size:20px">24&deg;</div>
+                        <div class="text-on-surface-variant" style="font-size:8px; letter-spacing:.08em">SEATTLE &middot; SUNNY</div>
+                      </div>
+                      <span class="material-symbols-outlined" style="font-size:26px; color:#ffd166">light_mode</span>
+                    </div>
+                    <div class="mt-1.5 grid grid-cols-3 gap-1 text-center">
+                      <div class="rounded bg-white/5 py-1"><div class="text-on-surface-variant" style="font-size:7px">MON</div><div class="text-on-surface" style="font-size:9px">26&deg;</div></div>
+                      <div class="rounded bg-white/5 py-1"><div class="text-on-surface-variant" style="font-size:7px">TUE</div><div class="text-on-surface" style="font-size:9px">22&deg;</div></div>
+                      <div class="rounded bg-white/5 py-1"><div class="text-on-surface-variant" style="font-size:7px">WED</div><div class="text-on-surface" style="font-size:9px">19&deg;</div></div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Popup: CPU meter -->
+                <div class="popup-win" style="top:10%; right:4%; width:31%; animation-delay:1.2s;">
+                  <div class="popup-titlebar"><span class="popup-dot" style="background:#ff5f57"></span><span class="popup-dot" style="background:#ffbd2e"></span><span class="popup-dot" style="background:#28c840"></span><span class="popup-title">cpu-monitor</span></div>
+                  <div class="p-2 flex items-center gap-2">
+                    <div class="relative w-12 h-12 flex-shrink-0">
+                      <svg viewBox="0 0 60 60" class="w-full h-full -rotate-90">
+                        <circle cx="30" cy="30" r="24" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="6"/>
+                        <circle id="cpu-ring" cx="30" cy="30" r="24" fill="none" stroke="#00f5ff" stroke-width="6" stroke-linecap="round" stroke-dasharray="150.8" stroke-dashoffset="60" style="transition:stroke-dashoffset .8s ease"/>
+                      </svg>
+                      <div id="cpu-pct" class="absolute inset-0 flex items-center justify-center font-headline-lg text-primary-container" style="font-size:11px">60%</div>
+                    </div>
+                    <div class="flex-1 space-y-1">
+                      <div class="h-1 rounded-full bg-white/10 overflow-hidden"><div class="h-full bg-primary-container bar-anim" style="width:72%"></div></div>
+                      <div class="h-1 rounded-full bg-white/10 overflow-hidden"><div class="h-full bg-primary-container bar-anim" style="width:54%; animation-delay:.3s"></div></div>
+                      <div class="h-1 rounded-full bg-white/10 overflow-hidden"><div class="h-full bg-secondary bar-anim" style="width:83%; animation-delay:.6s"></div></div>
+                      <div class="h-1 rounded-full bg-white/10 overflow-hidden"><div class="h-full bg-secondary bar-anim" style="width:47%; animation-delay:.9s"></div></div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Popup: Media player -->
+                <div class="popup-win" style="bottom:15%; left:7%; width:30%; animation-delay:2.1s;">
+                  <div class="popup-titlebar"><span class="popup-dot" style="background:#ff5f57"></span><span class="popup-dot" style="background:#ffbd2e"></span><span class="popup-dot" style="background:#28c840"></span><span class="popup-title">media</span></div>
+                  <div class="p-2 flex items-center gap-2">
+                    <div class="w-9 h-9 rounded-md bg-gradient-to-br from-primary-container/30 to-secondary/30 border border-white/10 flex items-center justify-center flex-shrink-0"><span class="material-symbols-outlined text-primary-container" style="font-size:18px">album</span></div>
+                    <div class="flex-1 min-w-0">
+                      <div class="text-on-surface truncate" style="font-size:9px">INTEL OST</div>
+                      <div class="w-full h-1 mt-1 bg-white/10 rounded-full overflow-hidden"><div class="h-full w-3/5 bg-gradient-to-r from-primary-container to-secondary rounded-full"></div></div>
+                      <div class="flex gap-2 mt-1 text-on-surface-variant">
+                        <span class="material-symbols-outlined" style="font-size:12px">skip_previous</span>
+                        <span class="material-symbols-outlined text-primary-container" style="font-size:14px">play_circle</span>
+                        <span class="material-symbols-outlined" style="font-size:12px">skip_next</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Popup: Performance graph -->
+                <div class="popup-win" style="bottom:11%; right:5%; width:36%; animation-delay:.6s;">
+                  <div class="popup-titlebar"><span class="popup-dot" style="background:#ff5f57"></span><span class="popup-dot" style="background:#ffbd2e"></span><span class="popup-dot" style="background:#28c840"></span><span class="popup-title">performance</span></div>
+                  <div class="p-2">
+                    <div class="flex items-center justify-between mb-1">
+                      <span style="font-family:'JetBrains Mono'; font-size:8px; letter-spacing:.1em" class="text-primary-container">MEM USAGE</span>
+                      <span class="flex items-center gap-1"><span class="dot-blink w-1 h-1 rounded-full bg-primary-container"></span><span id="mem-pct" class="text-on-surface" style="font-size:9px">68%</span></span>
+                    </div>
+                    <div class="h-9 overflow-hidden">
+                      <div class="graph-track h-full" style="animation-duration:4s;">
+                        <svg viewBox="0 0 400 36" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+                          <defs>
+                            <linearGradient id="g4" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0%" stop-color="#00f5ff" stop-opacity="0.35"/>
+                              <stop offset="100%" stop-color="#00f5ff" stop-opacity="0"/>
+                            </linearGradient>
+                          </defs>
+                          <polyline points="0,26 50,14 100,24 150,8 200,20 250,10 300,22 350,12 400,26" fill="none" stroke="#00f5ff" stroke-width="2" stroke-linejoin="round"/>
+                          <polygon points="0,26 50,14 100,24 150,8 200,20 250,10 300,22 350,12 400,26 400,36 0,36" fill="url(#g4)"/>
+                        </svg>
+                        <svg viewBox="0 0 400 36" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+                          <polyline points="0,26 50,14 100,24 150,8 200,20 250,10 300,22 350,12 400,26" fill="none" stroke="#00f5ff" stroke-width="2" stroke-linejoin="round"/>
+                          <polygon points="0,26 50,14 100,24 150,8 200,20 250,10 300,22 350,12 400,26 400,36 0,36" fill="url(#g4)"/>
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Taskbar -->
+                <div class="absolute bottom-0 inset-x-0 h-[9%] bg-black/50 backdrop-blur-md border-t border-white/10 flex items-center justify-between px-3 z-20">
+                  <div class="flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-[3px] bg-primary-container/80"></span>
+                    <span class="w-2 h-2 rounded-full bg-white/25"></span>
+                    <span class="w-2 h-2 rounded-full bg-white/25"></span>
+                    <span class="w-2 h-2 rounded-full bg-white/25"></span>
+                  </div>
+                  <div class="flex items-center gap-1.5">
+                    <span class="dot-blink w-1 h-1 rounded-full bg-primary-container"></span>
+                    <span class="text-on-surface-variant" style="font-size:7px; letter-spacing:.1em">11:47</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <!-- Laptop base / deck -->
+            <div class="relative h-[16px] w-[106%] left-[-3%] rounded-b-[14px] bg-gradient-to-b from-[#333338] via-[#1d1d21] to-[#0c0c0e] shadow-[0_18px_40px_rgba(0,0,0,0.5)]">
+              <div class="absolute left-1/2 -translate-x-1/2 top-0 w-[18%] h-[6px] rounded-b-[8px] bg-[#0a0a0c]"></div>
+            </div>
+          </div>
+        </div>
+        <!-- Feature 2: Cryo-Core Cooling -->
+        <div class="md:col-span-4 glass-panel rounded-xl p-8 relative overflow-hidden group hover:border-primary-container/50 transition-colors duration-500 min-h-[400px] flex flex-col">
+          <!-- RPM meter -->
+          <div class="rpm-meter">
+            <svg viewBox="0 0 60 60" class="w-14 h-14 -rotate-90">
+              <circle cx="30" cy="30" r="24" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="5"/>
+              <circle id="rpm-ring" class="rpm-ring" cx="30" cy="30" r="24" fill="none" stroke="#00f5ff" stroke-width="5" stroke-linecap="round" stroke-dasharray="150.8" stroke-dashoffset="100.5"/>
+            </svg>
+            <div class="rpm-label">RPM</div>
+            <div id="rpm-value" class="rpm-value">100</div>
+          </div>
+          <div class="flex-grow flex items-center justify-center relative">
+            <div class="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-secondary-fixed-dim/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
+            <span class="material-symbols-outlined text-[120px] text-surface-variant group-hover:text-primary-container transition-colors duration-700 font-light fan-spin" style="font-variation-settings: 'wght' 100;">mode_fan</span>
+          </div>
+          <div class="relative z-10 mt-auto">
+            <h2 class="font-headline-lg text-headline-lg-mobile md:text-headline-lg text-on-surface mb-2">Cryo-Core Cooling</h2>
+            <p class="text-on-surface-variant text-sm">Smart thermal routing maintains peak frequencies without breaking the silence. Zero-RPM mode active under light loads. <span class="fan-hint">Click on the fan for faster cooling ⚡</span></p>
+          </div>
+          <div class="w-full h-1 bg-surface-container-highest mt-6 rounded-full overflow-hidden">
+            <div class="h-full w-1/3 bg-gradient-to-r from-primary-container to-secondary-container rounded-full relative">
+              <div class="absolute right-0 top-0 bottom-0 w-2 bg-white blur-[2px]"></div>
+            </div>
+          </div>
+        </div>
+        <!-- Feature 3: Tactical Telemetry -->
+        <div class="md:col-span-12 glass-panel rounded-xl p-0 relative overflow-hidden group flex flex-col md:flex-row min-h-[500px]">
+          <div class="md:w-1/2 p-12 flex flex-col justify-center relative z-10 bg-gradient-to-r from-background/90 to-transparent">
+            <span class="inline-block px-3 py-1 rounded-full border border-secondary-container text-secondary text-xs uppercase tracking-widest font-label-sm w-max mb-6">OS Integration</span>
+            <h2 class="font-display-lg text-display-lg text-on-surface mb-6 leading-tight">Tactical<br/>Telemetry</h2>
+            <p class="text-on-surface-variant text-lg max-w-md mb-8">
+              Deploy advanced widgets across the workspace. Monitor system vitals, network traffic, and project rendering metrics in real-time. Unprecedented control at a glance.
+            </p>
+            <ul class="space-y-4 font-label-sm text-label-sm text-on-surface">
+              <li class="flex items-center gap-3">
+                <span class="w-1.5 h-1.5 bg-primary-container rounded-full shadow-[0_0_8px_rgba(0,245,255,0.8)]"></span>
+                Live Resource Allocation
+              </li>
+              <li class="flex items-center gap-3">
+                <span class="w-1.5 h-1.5 bg-primary-container rounded-full shadow-[0_0_8px_rgba(0,245,255,0.8)]"></span>
+                Modular Workspace Grids
+              </li>
+              <li class="flex items-center gap-3">
+                <span class="w-1.5 h-1.5 bg-primary-container rounded-full shadow-[0_0_8px_rgba(0,245,255,0.8)]"></span>
+                Instant Action Subroutines
+              </li>
+            </ul>
+          </div>
+          <!-- Live animated telemetry graph -->
+          <div class="md:w-1/2 relative min-h-[300px] overflow-hidden flex flex-col justify-around p-8 gap-4 bg-[#0e0e11]">
+            <!-- Gradient fade on left edge -->
+            <div class="absolute inset-y-0 left-0 w-16 bg-gradient-to-r from-background/90 to-transparent z-10"></div>
+            <!-- Gradient fade on right edge -->
+            <div class="absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-[#0e0e11] to-transparent z-10"></div>
+
+            <!-- Row 1: scrolling line chart -->
+            <div class="relative h-20 overflow-hidden">
+              <p class="font-label-sm text-label-sm text-primary-container mb-1 tracking-widest">CPU LOAD</p>
+              <div class="graph-track h-14">
+                <!-- tile 1 -->
+                <svg viewBox="0 0 400 56" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+                  <defs>
+                    <linearGradient id="g1" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stop-color="#00f5ff" stop-opacity="0.35"/>
+                      <stop offset="100%" stop-color="#00f5ff" stop-opacity="0"/>
+                    </linearGradient>
+                  </defs>
+                  <polyline points="0,40 40,28 80,38 120,12 160,30 200,20 240,34 280,8 320,26 360,18 400,36"
+                    fill="none" stroke="#00f5ff" stroke-width="2" stroke-linejoin="round"/>
+                  <polygon points="0,40 40,28 80,38 120,12 160,30 200,20 240,34 280,8 320,26 360,18 400,36 400,56 0,56"
+                    fill="url(#g1)"/>
+                </svg>
+                <!-- tile 2 (identical for seamless loop) -->
+                <svg viewBox="0 0 400 56" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+                  <polyline points="0,40 40,28 80,38 120,12 160,30 200,20 240,34 280,8 320,26 360,18 400,36"
+                    fill="none" stroke="#00f5ff" stroke-width="2" stroke-linejoin="round"/>
+                  <polygon points="0,40 40,28 80,38 120,12 160,30 200,20 240,34 280,8 320,26 360,18 400,36 400,56 0,56"
+                    fill="url(#g1)"/>
+                </svg>
+              </div>
+            </div>
+
+            <!-- Row 2: scrolling line chart (network) -->
+            <div class="relative h-20 overflow-hidden">
+              <p class="font-label-sm text-label-sm text-secondary mb-1 tracking-widest">NET I/O</p>
+              <div class="graph-track h-14" style="animation-duration:4s;">
+                <svg viewBox="0 0 400 56" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+                  <defs>
+                    <linearGradient id="g2" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stop-color="#ecb1ff" stop-opacity="0.3"/>
+                      <stop offset="100%" stop-color="#ecb1ff" stop-opacity="0"/>
+                    </linearGradient>
+                  </defs>
+                  <polyline points="0,48 50,20 100,44 150,10 200,38 250,14 300,42 350,22 400,50"
+                    fill="none" stroke="#ecb1ff" stroke-width="2" stroke-linejoin="round"/>
+                  <polygon points="0,48 50,20 100,44 150,10 200,38 250,14 300,42 350,22 400,50 400,56 0,56"
+                    fill="url(#g2)"/>
+                </svg>
+                <svg viewBox="0 0 400 56" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+                  <polyline points="0,48 50,20 100,44 150,10 200,38 250,14 300,42 350,22 400,50"
+                    fill="none" stroke="#ecb1ff" stroke-width="2" stroke-linejoin="round"/>
+                  <polygon points="0,48 50,20 100,44 150,10 200,38 250,14 300,42 350,22 400,50 400,56 0,56"
+                    fill="url(#g2)"/>
+                </svg>
+              </div>
+            </div>
+
+            <!-- Row 3: animated bar chart -->
+            <div class="relative">
+              <p class="font-label-sm text-label-sm text-on-surface-variant mb-2 tracking-widest">CORE THREADS</p>
+              <div class="flex items-end gap-2 h-10">
+                <div class="bar-anim flex-1 rounded-sm bg-primary-container" style="height:55%"></div>
+                <div class="bar-anim flex-1 rounded-sm bg-primary-container" style="height:80%"></div>
+                <div class="bar-anim flex-1 rounded-sm bg-primary-container" style="height:40%"></div>
+                <div class="bar-anim flex-1 rounded-sm bg-primary-container" style="height:90%"></div>
+                <div class="bar-anim flex-1 rounded-sm bg-primary-container" style="height:65%"></div>
+                <div class="bar-anim flex-1 rounded-sm bg-secondary" style="height:70%; animation-delay:.2s"></div>
+                <div class="bar-anim flex-1 rounded-sm bg-secondary" style="height:50%; animation-delay:.5s"></div>
+                <div class="bar-anim flex-1 rounded-sm bg-secondary" style="height:85%; animation-delay:.7s"></div>
+              </div>
+            </div>
+
+            <!-- Row 4: live status dots -->
+            <div class="flex items-center gap-4">
+              <span class="dot-blink w-2 h-2 rounded-full bg-primary-container shadow-[0_0_6px_#00f5ff]"></span>
+              <span class="font-label-sm text-label-sm text-on-surface-variant tracking-widest">SYSTEM NOMINAL</span>
+              <span class="dot-blink w-2 h-2 rounded-full bg-secondary shadow-[0_0_6px_#ecb1ff]"></span>
+              <span class="dot-blink w-2 h-2 rounded-full bg-primary-container shadow-[0_0_6px_#00f5ff]"></span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ======== Multitasking Section ======== -->
+      <section class="mb-32">
+        <div class="mb-10">
+          <span class="inline-block px-3 py-1 rounded-full border border-primary-container/40 text-primary-container text-xs uppercase tracking-widest font-label-sm mb-4">Parallel Processing</span>
+          <div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
+            <h2 class="font-display-lg text-display-lg text-on-surface leading-tight">Fluid<br/>Multitasking</h2>
+            <p class="text-on-surface-variant max-w-sm text-base">Run every app at peak performance &mdash; simultaneously. HP INTEL SYSTEM context-switches in nanoseconds so nothing ever waits.</p>
+          </div>
+        </div>
+
+        <div class="glass-panel rounded-xl relative overflow-hidden min-h-[540px] flex flex-col justify-between" style="background:radial-gradient(ellipse at 60% 0%,rgba(0,220,229,0.08) 0%,transparent 60%), rgba(14,14,17,0.9);">
+          <div class="absolute top-[-60px] left-[10%] w-72 h-72 rounded-full blur-[120px] bg-primary-container/10 pointer-events-none"></div>
+          <div class="absolute bottom-[-40px] right-[8%] w-56 h-56 rounded-full blur-[100px] bg-secondary/10 pointer-events-none"></div>
+
+          <!-- Top bar -->
+          <div class="relative z-10 px-10 pt-10 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <span class="material-symbols-outlined text-primary-container" style="font-size:28px">splitscreen</span>
+              <span class="font-headline-lg text-headline-lg-mobile text-on-surface">All apps. All at once.</span>
+            </div>
+            <div class="hidden md:flex items-center gap-6 font-label-sm text-label-sm text-on-surface-variant">
+              <span class="flex items-center gap-2"><span class="dot-blink w-2 h-2 rounded-full bg-primary-container shadow-[0_0_6px_#00f5ff]"></span>8 ACTIVE WINDOWS</span>
+              <span class="flex items-center gap-2"><span class="dot-blink w-2 h-2 rounded-full bg-secondary shadow-[0_0_6px_#ecb1ff]" style="animation-delay:.7s"></span>ZERO LAG</span>
+            </div>
+          </div>
+
+          <!-- Marquee strip -->
+          <div class="relative z-10 py-8 overflow-hidden">
+            <div class="absolute inset-y-0 left-0 w-20 bg-gradient-to-r from-[#0e0e11] to-transparent z-10 pointer-events-none"></div>
+            <div class="absolute inset-y-0 right-0 w-20 bg-gradient-to-l from-[#0e0e11] to-transparent z-10 pointer-events-none"></div>
+            <div class="marquee-track gap-5 items-start px-4">
+
+              <!-- W1: Browser -->
+              <div class="app-window">
+                <div class="win-titlebar"><span class="win-dot" style="background:#ff5f57"></span><span class="win-dot" style="background:#ffbd2e"></span><span class="win-dot" style="background:#28c840"></span><span class="ml-3 font-label-sm text-label-sm text-on-surface-variant">hp-browser &mdash; Dashboard</span></div>
+                <div class="win-body">
+                  <div class="h-3 w-3/4 rounded bg-surface-variant mb-3"></div>
+                  <div class="grid grid-cols-2 gap-2 mb-3">
+                    <div class="h-16 rounded-sm bg-primary-container/10 border border-primary-container/20 flex items-center justify-center"><span class="material-symbols-outlined text-primary-container" style="font-size:22px">show_chart</span></div>
+                    <div class="h-16 rounded-sm bg-secondary/10 border border-secondary/20 flex items-center justify-center"><span class="material-symbols-outlined text-secondary" style="font-size:22px">donut_large</span></div>
+                  </div>
+                  <div class="h-2 w-full rounded bg-surface-variant mb-2"></div>
+                  <div class="h-2 w-4/5 rounded bg-surface-variant mb-2"></div>
+                  <div class="h-2 w-2/3 rounded bg-surface-variant"></div>
+                </div>
+              </div>
+
+              <!-- W2: Code editor -->
+              <div class="app-window" style="width:380px">
+                <div class="win-titlebar"><span class="win-dot" style="background:#ff5f57"></span><span class="win-dot" style="background:#ffbd2e"></span><span class="win-dot" style="background:#28c840"></span><span class="ml-3 font-label-sm text-label-sm text-on-surface-variant">hp-code &mdash; main.ts</span></div>
+                <div class="win-body font-label-sm text-label-sm" style="background:#0d1117">
+                  <div class="flex gap-3" style="line-height:1.8">
+                    <div class="text-surface-variant select-none">1<br>2<br>3<br>4<br>5<br>6<br>7</div>
+                    <div><div><span style="color:#ff7b72">import</span> <span style="color:#79c0ff">{ HpIntel }</span> <span style="color:#ff7b72">from</span> <span style="color:#a5d6ff">&#39;@hp/intel-core&#39;</span></div><div>&nbsp;</div><div><span style="color:#79c0ff">const</span> <span style="color:#e3f2fd"> device</span> = <span style="color:#79c0ff">new</span> <span style="color:#ffa657">HpIntel</span>()</div><div><span style="color:#e3f2fd">device</span>.<span style="color:#d2a8ff">init</span>({ <span style="color:#79c0ff">turbo</span>: <span style="color:#ff7b72">true</span> })</div><div>&nbsp;</div><div><span style="color:#8b949e">// stream telemetry</span></div><div><span style="color:#e3f2fd">device</span>.<span style="color:#d2a8ff">stream</span>().<span style="color:#d2a8ff">subscribe</span>(<span style="color:#ffa657">onData</span>)</div></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- W3: Media player -->
+              <div class="app-window">
+                <div class="win-titlebar"><span class="win-dot" style="background:#ff5f57"></span><span class="win-dot" style="background:#ffbd2e"></span><span class="win-dot" style="background:#28c840"></span><span class="ml-3 font-label-sm text-label-sm text-on-surface-variant">hp-media</span></div>
+                <div class="win-body flex flex-col items-center justify-center gap-4">
+                  <div class="w-20 h-20 rounded-xl bg-gradient-to-br from-primary-container/30 to-secondary/30 border border-white/10 flex items-center justify-center"><span class="material-symbols-outlined text-primary-container" style="font-size:36px">album</span></div>
+                  <div class="text-center"><div class="font-headline-lg text-[13px] text-on-surface">INTEL OST</div><div class="font-label-sm text-label-sm text-on-surface-variant">SYSTEM AUDIO</div></div>
+                  <div class="w-full h-1 bg-surface-variant rounded-full overflow-hidden"><div class="h-full w-3/5 bg-gradient-to-r from-primary-container to-secondary rounded-full"></div></div>
+                  <div class="flex gap-5 text-on-surface-variant">
+                    <span class="material-symbols-outlined hover:text-primary-container transition-colors" style="font-size:20px">skip_previous</span>
+                    <span class="material-symbols-outlined text-primary-container" style="font-size:24px">pause_circle</span>
+                    <span class="material-symbols-outlined hover:text-primary-container transition-colors" style="font-size:20px">skip_next</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- W4: Terminal -->
+              <div class="app-window" style="width:320px">
+                <div class="win-titlebar"><span class="win-dot" style="background:#ff5f57"></span><span class="win-dot" style="background:#ffbd2e"></span><span class="win-dot" style="background:#28c840"></span><span class="ml-3 font-label-sm text-label-sm text-on-surface-variant">hp-terminal</span></div>
+                <div class="win-body font-label-sm" style="background:#060606;color:#00f5ff;line-height:1.9;font-size:11px">
+                  <div><span style="color:#28c840">hp@intel</span>:<span style="color:#79c0ff">~</span>$ hp bench --all</div>
+                  <div style="color:#aaa">Running suite&hellip; <span style="color:#28c840">&#10003;</span></div>
+                  <div>CPU &nbsp;<span class="bar-anim" style="color:#00f5ff">&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;</span> 98%</div>
+                  <div>GPU &nbsp;<span class="bar-anim" style="color:#ecb1ff;animation-delay:.4s">&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9617;</span> 94%</div>
+                  <div>MEM <span class="bar-anim" style="color:#00f5ff;animation-delay:.8s">&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9617;&#9617;&#9617;</span> 76%</div>
+                  <div style="color:#28c840">SCORE: 48,291 pts &#8593;</div>
+                </div>
+              </div>
+
+              <!-- W5: Notes -->
+              <div class="app-window">
+                <div class="win-titlebar"><span class="win-dot" style="background:#ff5f57"></span><span class="win-dot" style="background:#ffbd2e"></span><span class="win-dot" style="background:#28c840"></span><span class="ml-3 font-label-sm text-label-sm text-on-surface-variant">hp-notes</span></div>
+                <div class="win-body">
+                  <div class="h-4 w-1/2 rounded bg-primary-container/20 mb-4"></div>
+                  <div class="space-y-2">
+                    <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-sm border border-primary-container/50 flex-shrink-0"></span><div class="h-2 flex-1 rounded bg-surface-variant"></div></div>
+                    <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-sm border border-primary-container/50 bg-primary-container/30 flex-shrink-0"></span><div class="h-2 flex-1 rounded bg-surface-variant opacity-50"></div></div>
+                    <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-sm border border-primary-container/50 bg-primary-container/30 flex-shrink-0"></span><div class="h-2 w-3/4 rounded bg-surface-variant opacity-50"></div></div>
+                    <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-sm border border-primary-container/50 flex-shrink-0"></span><div class="h-2 flex-1 rounded bg-surface-variant"></div></div>
+                  </div>
+                  <div class="mt-5 h-2 w-full rounded bg-surface-variant mb-2"></div>
+                  <div class="h-2 w-2/3 rounded bg-surface-variant"></div>
+                </div>
+              </div>
+
+              <!-- W6: GPU Monitor -->
+              <div class="app-window">
+                <div class="win-titlebar"><span class="win-dot" style="background:#ff5f57"></span><span class="win-dot" style="background:#ffbd2e"></span><span class="win-dot" style="background:#28c840"></span><span class="ml-3 font-label-sm text-label-sm text-on-surface-variant">hp-gpu-monitor</span></div>
+                <div class="win-body flex flex-col gap-3">
+                  <div class="flex justify-between font-label-sm text-label-sm"><span class="text-on-surface-variant">GPU CORE</span><span class="text-primary-container">98&deg;C</span></div>
+                  <div class="w-full h-1.5 bg-surface-variant rounded-full overflow-hidden"><div class="h-full rounded-full bg-gradient-to-r from-primary-container to-secondary bar-anim" style="width:92%"></div></div>
+                  <div class="flex justify-between font-label-sm text-label-sm"><span class="text-on-surface-variant">VRAM</span><span class="text-secondary">22 / 24 GB</span></div>
+                  <div class="w-full h-1.5 bg-surface-variant rounded-full overflow-hidden"><div class="h-full rounded-full bg-gradient-to-r from-secondary to-primary-container bar-anim" style="width:85%;animation-delay:.3s"></div></div>
+                  <div class="grid grid-cols-3 gap-2 mt-2">
+                    <div class="h-12 rounded-sm bg-primary-container/10 border border-primary-container/20 flex flex-col items-center justify-center gap-1"><span class="font-label-sm text-[10px] text-primary-container">FPS</span><span class="font-headline-lg text-[15px] text-on-surface">60</span></div>
+                    <div class="h-12 rounded-sm bg-secondary/10 border border-secondary/20 flex flex-col items-center justify-center gap-1"><span class="font-label-sm text-[10px] text-secondary">CORES</span><span class="font-headline-lg text-[15px] text-on-surface">128</span></div>
+                    <div class="h-12 rounded-sm bg-primary-container/10 border border-primary-container/20 flex flex-col items-center justify-center gap-1"><span class="font-label-sm text-[10px] text-primary-container">WATT</span><span class="font-headline-lg text-[15px] text-on-surface">320</span></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- ── DUPLICATE SET for seamless loop ── -->
+              <div class="app-window"><div class="win-titlebar"><span class="win-dot" style="background:#ff5f57"></span><span class="win-dot" style="background:#ffbd2e"></span><span class="win-dot" style="background:#28c840"></span><span class="ml-3 font-label-sm text-label-sm text-on-surface-variant">hp-browser &mdash; Dashboard</span></div><div class="win-body"><div class="h-3 w-3/4 rounded bg-surface-variant mb-3"></div><div class="grid grid-cols-2 gap-2 mb-3"><div class="h-16 rounded-sm bg-primary-container/10 border border-primary-container/20 flex items-center justify-center"><span class="material-symbols-outlined text-primary-container" style="font-size:22px">show_chart</span></div><div class="h-16 rounded-sm bg-secondary/10 border border-secondary/20 flex items-center justify-center"><span class="material-symbols-outlined text-secondary" style="font-size:22px">donut_large</span></div></div><div class="h-2 w-full rounded bg-surface-variant mb-2"></div><div class="h-2 w-4/5 rounded bg-surface-variant mb-2"></div><div class="h-2 w-2/3 rounded bg-surface-variant"></div></div></div>
+              <div class="app-window" style="width:380px"><div class="win-titlebar"><span class="win-dot" style="background:#ff5f57"></span><span class="win-dot" style="background:#ffbd2e"></span><span class="win-dot" style="background:#28c840"></span><span class="ml-3 font-label-sm text-label-sm text-on-surface-variant">hp-code &mdash; main.ts</span></div><div class="win-body font-label-sm text-label-sm" style="background:#0d1117"><div class="flex gap-3" style="line-height:1.8"><div class="text-surface-variant select-none">1<br>2<br>3<br>4<br>5<br>6<br>7</div><div><div><span style="color:#ff7b72">import</span> <span style="color:#79c0ff">{ HpIntel }</span> <span style="color:#ff7b72">from</span> <span style="color:#a5d6ff">&#39;@hp/intel-core&#39;</span></div><div>&nbsp;</div><div><span style="color:#79c0ff">const</span> <span style="color:#e3f2fd"> device</span> = <span style="color:#79c0ff">new</span> <span style="color:#ffa657">HpIntel</span>()</div><div><span style="color:#e3f2fd">device</span>.<span style="color:#d2a8ff">init</span>({ <span style="color:#79c0ff">turbo</span>: <span style="color:#ff7b72">true</span> })</div><div>&nbsp;</div><div><span style="color:#8b949e">// stream telemetry</span></div><div><span style="color:#e3f2fd">device</span>.<span style="color:#d2a8ff">stream</span>().<span style="color:#d2a8ff">subscribe</span>(<span style="color:#ffa657">onData</span>)</div></div></div></div></div>
+              <div class="app-window"><div class="win-titlebar"><span class="win-dot" style="background:#ff5f57"></span><span class="win-dot" style="background:#ffbd2e"></span><span class="win-dot" style="background:#28c840"></span><span class="ml-3 font-label-sm text-label-sm text-on-surface-variant">hp-media</span></div><div class="win-body flex flex-col items-center justify-center gap-4"><div class="w-20 h-20 rounded-xl bg-gradient-to-br from-primary-container/30 to-secondary/30 border border-white/10 flex items-center justify-center"><span class="material-symbols-outlined text-primary-container" style="font-size:36px">album</span></div><div class="text-center"><div class="font-headline-lg text-[13px] text-on-surface">INTEL OST</div><div class="font-label-sm text-label-sm text-on-surface-variant">SYSTEM AUDIO</div></div><div class="w-full h-1 bg-surface-variant rounded-full overflow-hidden"><div class="h-full w-3/5 bg-gradient-to-r from-primary-container to-secondary rounded-full"></div></div><div class="flex gap-5 text-on-surface-variant"><span class="material-symbols-outlined" style="font-size:20px">skip_previous</span><span class="material-symbols-outlined text-primary-container" style="font-size:24px">pause_circle</span><span class="material-symbols-outlined" style="font-size:20px">skip_next</span></div></div></div>
+              <div class="app-window" style="width:320px"><div class="win-titlebar"><span class="win-dot" style="background:#ff5f57"></span><span class="win-dot" style="background:#ffbd2e"></span><span class="win-dot" style="background:#28c840"></span><span class="ml-3 font-label-sm text-label-sm text-on-surface-variant">hp-terminal</span></div><div class="win-body font-label-sm" style="background:#060606;color:#00f5ff;line-height:1.9;font-size:11px"><div><span style="color:#28c840">hp@intel</span>:<span style="color:#79c0ff">~</span>$ hp bench --all</div><div style="color:#aaa">Running suite&hellip; <span style="color:#28c840">&#10003;</span></div><div>CPU &nbsp;<span class="bar-anim" style="color:#00f5ff">&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;</span> 98%</div><div>GPU &nbsp;<span class="bar-anim" style="color:#ecb1ff;animation-delay:.4s">&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9617;</span> 94%</div><div>MEM <span class="bar-anim" style="color:#00f5ff;animation-delay:.8s">&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9617;&#9617;&#9617;</span> 76%</div><div style="color:#28c840">SCORE: 48,291 pts &#8593;</div></div></div>
+              <div class="app-window"><div class="win-titlebar"><span class="win-dot" style="background:#ff5f57"></span><span class="win-dot" style="background:#ffbd2e"></span><span class="win-dot" style="background:#28c840"></span><span class="ml-3 font-label-sm text-label-sm text-on-surface-variant">hp-notes</span></div><div class="win-body"><div class="h-4 w-1/2 rounded bg-primary-container/20 mb-4"></div><div class="space-y-2"><div class="flex items-center gap-2"><span class="w-3 h-3 rounded-sm border border-primary-container/50 flex-shrink-0"></span><div class="h-2 flex-1 rounded bg-surface-variant"></div></div><div class="flex items-center gap-2"><span class="w-3 h-3 rounded-sm border border-primary-container/50 bg-primary-container/30 flex-shrink-0"></span><div class="h-2 flex-1 rounded bg-surface-variant opacity-50"></div></div></div><div class="mt-5 h-2 w-full rounded bg-surface-variant mb-2"></div><div class="h-2 w-2/3 rounded bg-surface-variant"></div></div></div>
+              <div class="app-window"><div class="win-titlebar"><span class="win-dot" style="background:#ff5f57"></span><span class="win-dot" style="background:#ffbd2e"></span><span class="win-dot" style="background:#28c840"></span><span class="ml-3 font-label-sm text-label-sm text-on-surface-variant">hp-gpu-monitor</span></div><div class="win-body flex flex-col gap-3"><div class="flex justify-between font-label-sm text-label-sm"><span class="text-on-surface-variant">GPU CORE</span><span class="text-primary-container">98&deg;C</span></div><div class="w-full h-1.5 bg-surface-variant rounded-full overflow-hidden"><div class="h-full rounded-full bg-gradient-to-r from-primary-container to-secondary bar-anim" style="width:92%"></div></div><div class="flex justify-between font-label-sm text-label-sm"><span class="text-on-surface-variant">VRAM</span><span class="text-secondary">22 / 24 GB</span></div><div class="w-full h-1.5 bg-surface-variant rounded-full overflow-hidden"><div class="h-full rounded-full bg-gradient-to-r from-secondary to-primary-container bar-anim" style="width:85%;animation-delay:.3s"></div></div><div class="grid grid-cols-3 gap-2 mt-2"><div class="h-12 rounded-sm bg-primary-container/10 border border-primary-container/20 flex flex-col items-center justify-center gap-1"><span class="font-label-sm text-[10px] text-primary-container">FPS</span><span class="font-headline-lg text-[15px] text-on-surface">60</span></div><div class="h-12 rounded-sm bg-secondary/10 border border-secondary/20 flex flex-col items-center justify-center gap-1"><span class="font-label-sm text-[10px] text-secondary">CORES</span><span class="font-headline-lg text-[15px] text-on-surface">128</span></div><div class="h-12 rounded-sm bg-primary-container/10 border border-primary-container/20 flex flex-col items-center justify-center gap-1"><span class="font-label-sm text-[10px] text-primary-container">WATT</span><span class="font-headline-lg text-[15px] text-on-surface">320</span></div></div></div></div>
+
+            </div><!-- /marquee-track -->
+          </div><!-- /marquee overflow -->
+
+          <!-- Bottom stats -->
+          <div class="relative z-10 px-10 pb-8 grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="glass-panel rounded-lg p-4 text-center"><div class="font-display-lg text-[28px] text-primary-container glow-text">&infin;</div><div class="font-label-sm text-label-sm text-on-surface-variant mt-1">CONCURRENT APPS</div></div>
+            <div class="glass-panel rounded-lg p-4 text-center"><div class="font-display-lg text-[28px] text-on-surface">0<span class="text-primary-container">ms</span></div><div class="font-label-sm text-label-sm text-on-surface-variant mt-1">CONTEXT SWITCH</div></div>
+            <div class="glass-panel rounded-lg p-4 text-center"><div class="font-display-lg text-[28px] text-secondary">1080p</div><div class="font-label-sm text-label-sm text-on-surface-variant mt-1">DISPLAY OUTPUT</div></div>
+            <div class="glass-panel rounded-lg p-4 text-center"><div class="font-display-lg text-[28px] text-on-surface">60<span class="text-primary-container">Hz</span></div><div class="font-label-sm text-label-sm text-on-surface-variant mt-1">REFRESH RATE</div></div>
+          </div>
+        </div>
+      </section>
+      <!-- ======== End Multitasking ======== -->
+
+      <!-- ======== Intel Arc Graphics Section ======== -->
+      <section class="mb-32" id="intel-arc">
+        <div class="mb-10">
+          <span class="inline-block px-3 py-1 rounded-full border border-primary-container/40 text-primary-container text-xs uppercase tracking-widest font-label-sm mb-4">Integrated Graphics</span>
+          <div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
+            <h2 class="font-display-lg text-display-lg text-on-surface leading-tight">Intel&reg; Arc&trade;<br/>Graphics</h2>
+            <p class="text-on-surface-variant max-w-sm text-base">Built-in Arc graphics engine with hardware ray tracing, XeSS AI upscaling and an intelligent display engine &mdash; all on a single chip.</p>
+          </div>
+        </div>
+
+        <div class="glass-panel rounded-xl relative overflow-hidden min-h-[520px] p-10" style="background:radial-gradient(ellipse at 30% 100%,rgba(0,199,253,0.10) 0%,transparent 55%), radial-gradient(ellipse at 80% 0%,rgba(236,177,255,0.07) 0%,transparent 55%), rgba(14,14,17,0.9);">
+          <div class="absolute top-[-70px] left-[45%] w-72 h-72 rounded-full blur-[120px] bg-primary-container/10 pointer-events-none"></div>
+
+          <div class="relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
+            <!-- Animated GPU die -->
+            <div class="flex items-center justify-center">
+              <div class="relative p-6 rounded-xl border border-primary-container/40" style="box-shadow:0 0 40px rgba(0,245,255,0.18), inset 0 0 30px rgba(0,245,255,0.06);">
+                <div class="absolute -inset-3 rounded-xl border border-primary-container/20 arc-ring pointer-events-none"></div>
+                <div class="grid grid-cols-6 gap-2" id="xe-core-grid"></div>
+                <div class="mt-4 text-center font-label-sm text-label-sm text-primary-container tracking-[0.3em]">ARC GPU DIE &middot; XE-CORES</div>
+              </div>
+            </div>
+
+            <!-- Live metrics -->
+            <div class="space-y-6">
+              <div>
+                <div class="flex justify-between font-label-sm text-label-sm mb-2"><span class="text-on-surface-variant tracking-widest">GPU CLOCK</span><span class="text-primary-container" id="arc-clock">2100 MHz</span></div>
+                <div class="w-full h-1.5 bg-surface-variant rounded-full overflow-hidden"><div id="arc-clock-bar" class="h-full rounded-full bg-gradient-to-r from-primary-container to-secondary" style="width:80%;transition:width .5s"></div></div>
+              </div>
+              <div>
+                <div class="flex justify-between font-label-sm text-label-sm mb-2"><span class="text-on-surface-variant tracking-widest">GPU UTILIZATION</span><span class="text-secondary" id="arc-util">72 %</span></div>
+                <div class="w-full h-1.5 bg-surface-variant rounded-full overflow-hidden"><div id="arc-util-bar" class="h-full rounded-full bg-gradient-to-r from-secondary to-primary-container" style="width:72%;transition:width .5s"></div></div>
+              </div>
+
+              <!-- Frame delivery graph -->
+              <div class="relative h-20 overflow-hidden">
+                <p class="font-label-sm text-label-sm text-primary-container mb-1 tracking-widest">FRAME DELIVERY</p>
+                <div class="graph-track h-14" style="animation-duration:5s;">
+                  <svg viewBox="0 0 400 56" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                      <linearGradient id="g3" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stop-color="#00c7fd" stop-opacity="0.35"/>
+                        <stop offset="100%" stop-color="#00c7fd" stop-opacity="0"/>
+                      </linearGradient>
+                    </defs>
+                    <polyline points="0,30 40,26 80,32 120,24 160,30 200,22 240,28 280,20 320,30 360,24 400,30"
+                      fill="none" stroke="#00c7fd" stroke-width="2" stroke-linejoin="round"/>
+                    <polygon points="0,30 40,26 80,32 120,24 160,30 200,22 240,28 280,20 320,30 360,24 400,30 400,56 0,56"
+                      fill="url(#g3)"/>
+                  </svg>
+                  <svg viewBox="0 0 400 56" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+                    <polyline points="0,30 40,26 80,32 120,24 160,30 200,22 240,28 280,20 320,30 360,24 400,30"
+                      fill="none" stroke="#00c7fd" stroke-width="2" stroke-linejoin="round"/>
+                    <polygon points="0,30 40,26 80,32 120,24 160,30 200,22 240,28 280,20 320,30 360,24 400,30 400,56 0,56"
+                      fill="url(#g3)"/>
+                  </svg>
+                </div>
+              </div>
+
+              <!-- Stat tiles -->
+              <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div class="glass-panel rounded-lg p-3 text-center"><div class="font-headline-lg text-xl text-primary-container glow-text" id="arc-fps">60</div><div class="font-label-sm text-[9px] text-on-surface-variant mt-1">FPS @ 1080p</div></div>
+                <div class="glass-panel rounded-lg p-3 text-center"><div class="font-headline-lg text-xl text-on-surface">8</div><div class="font-label-sm text-[9px] text-on-surface-variant mt-1">XE-CORES</div></div>
+                <div class="glass-panel rounded-lg p-3 text-center"><div class="font-headline-lg text-xl text-secondary">RT</div><div class="font-label-sm text-[9px] text-on-surface-variant mt-1">RAY TRACING</div></div>
+                <div class="glass-panel rounded-lg p-3 text-center"><div class="font-headline-lg text-xl text-primary-container">XeSS</div><div class="font-label-sm text-[9px] text-on-surface-variant mt-1">AI UPSCALING</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      <!-- ======== End Intel Arc ======== -->
+
+      <!-- ======== HP 15 FD1099TU Product Page ======== -->
+      <section class="mb-32" id="hp-15">
+        <div class="glass-panel rounded-xl relative overflow-hidden px-8 py-20 md:px-16 text-center">
+          <!-- Neon glow orbs -->
+          <div class="absolute top-[-80px] left-[15%] w-80 h-80 rounded-full blur-[130px] bg-primary-container/15 pointer-events-none glow-orb"></div>
+          <div class="absolute bottom-[-60px] right-[12%] w-72 h-72 rounded-full blur-[120px] bg-secondary/15 pointer-events-none glow-orb" style="animation-delay:2s"></div>
+
+          <div class="relative z-10">
+            <span class="reveal inline-block px-3 py-1 rounded-full border border-primary-container/40 text-primary-container text-xs uppercase tracking-widest font-label-sm mb-6">The Machine</span>
+            <h2 class="reveal font-display-lg text-on-surface leading-tight mb-6" style="font-size:clamp(28px,5vw,64px)">HP 15 FD 1099 TU<br/>LAPTOP</h2>
+            <p class="reveal text-on-surface-variant max-w-2xl mx-auto text-lg mb-12">Powered by Intel&reg; Core&trade; with integrated Intel&reg; Arc&trade; Graphics. A 15.6&Prime; FHD display tuned for clarity &mdash; 1080p at a smooth 60&nbsp;Hz.</p>
+
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto">
+              <div class="reveal glass-panel rounded-lg p-5"><div class="font-headline-lg text-primary-container glow-text text-xl">Intel&reg; Core&trade;</div><div class="font-label-sm text-label-sm text-on-surface-variant mt-2">PROCESSOR</div></div>
+              <div class="reveal glass-panel rounded-lg p-5"><div class="font-headline-lg text-on-surface text-xl">16 GB</div><div class="font-label-sm text-label-sm text-on-surface-variant mt-2">MEMORY</div></div>
+              <div class="reveal glass-panel rounded-lg p-5"><div class="font-headline-lg text-secondary text-xl">512 GB</div><div class="font-label-sm text-label-sm text-on-surface-variant mt-2">NVMe SSD</div></div>
+              <div class="reveal glass-panel rounded-lg p-5"><div class="font-headline-lg text-primary-container glow-text text-xl">15.6&Prime; FHD</div><div class="font-label-sm text-label-sm text-on-surface-variant mt-2">1080p &middot; 60 Hz</div></div>
+            </div>
+          </div>
+        </div>
+      </section>
+      <!-- ======== End HP 15 ======== -->
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="w-full py-12 bg-surface-container-lowest border-t border-outline-variant/20 hover:text-primary-fixed-dim transition-colors relative group">
+      <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNCIgaGVpZ2h0PSI0IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxyZWN0IHdpZHRoPSI0IiBoZWlnaHQ9IjEiIGZpbGw9InJnYmEoMCwyNDUsMjU1LDAuMDUpIi8+PC9zdmc+')] opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
+      <div class="flex flex-col md:flex-row justify-between items-center px-5 md:px-16 gap-6 max-w-[1440px] mx-auto relative z-10">
+        <div class="font-headline-lg text-primary-fixed tracking-widest text-xl mb-6 md:mb-0">HP INTEL SYSTEM</div>
+        <div class="flex gap-6 font-label-sm text-label-sm text-on-surface-variant">
+          <a class="hover:text-primary-fixed-dim transition-colors" href="#">Privacy</a>
+          <a class="hover:text-primary-fixed-dim transition-colors" href="#">Terms</a>
+          <a class="hover:text-primary-fixed-dim transition-colors" href="#">Support</a>
+          <a class="hover:text-primary-fixed-dim transition-colors" href="#">Contact</a>
+        </div>
+        <div class="text-on-surface-variant font-label-sm text-[10px] mt-6 md:mt-0 tracking-widest opacity-50">
+          &copy; 2024 HP INTEL SYSTEM. ALL RIGHTS RESERVED.
+        </div>
+      </div>
+    </footer>
+  </div>
+
+  <script>
+    /* ---- Fan turbo click + RPM meter ---- */
+    (() => {
+      const fan = document.querySelector('.fan-spin');
+      const rpmRing = document.getElementById('rpm-ring');
+      const rpmValue = document.getElementById('rpm-value');
+      let turboTimer = null;
+      let rpmTimer = null;
+      const C = 150.8; // ring circumference
+      const setRPM = rpm => {
+        if (rpmRing) rpmRing.style.strokeDashoffset = (C * (1 - rpm / 300)).toFixed(1);
+        if (rpmValue) rpmValue.textContent = rpm;
+      };
+      fan.addEventListener('click', () => {
+        fan.classList.add('turbo');
+        setRPM(300);
+        clearTimeout(turboTimer);
+        clearTimeout(rpmTimer);
+        turboTimer = setTimeout(() => fan.classList.remove('turbo'), 3000);
+        rpmTimer = setTimeout(() => setRPM(100), 3000);
+      });
+      setRPM(100); // initialize at 100 RPM
+    })();
+
+    /* ---- Fan slides in from the left whenever the page scrolls ---- */
+    (() => {
+      const fan = document.querySelector('.fan-spin');
+      if (!fan) return;
+      let sliding = false;
+      window.addEventListener('scroll', () => {
+        if (sliding) return;
+        sliding = true;
+        // jump the fan off to the left (the spin animation owns `transform`,
+        // so the individual `translate` property is used instead)
+        fan.style.transition = 'color 0.3s, filter 0.3s';
+        fan.style.translate  = '-140px 0';
+        // then glide it smoothly back to its original position
+        setTimeout(() => {
+          fan.style.transition = 'translate 0.8s cubic-bezier(0.22, 1, 0.36, 1), color 0.3s, filter 0.3s';
+          fan.style.translate  = '0px 0px';
+        }, 30);
+        setTimeout(() => { sliding = false; }, 1100);
+      }, { passive: true });
+    })();
+
+    /* ---- Laptop workspace CPU meter ---- */
+    (() => {
+      const pct  = document.getElementById('cpu-pct');
+      const ring = document.getElementById('cpu-ring');
+      const mem  = document.getElementById('mem-pct');
+      if (!pct || !ring) return;
+      const C = 150.8; // ring circumference
+      const tick = () => {
+        const v = 45 + Math.round(Math.random() * 40);
+        pct.textContent  = v + '%';
+        ring.style.strokeDashoffset = (C * (1 - v / 100)).toFixed(1);
+        if (mem) mem.textContent = (58 + Math.round(Math.random() * 25)) + '%';
+      };
+      tick();
+      setInterval(tick, 1400);
+    })();
+
+    /* ---- Intel Arc live metrics ---- */
+    (() => {
+      const grid = document.getElementById('xe-core-grid');
+      if (grid) {
+        for (let i = 0; i < 36; i++) {
+          const c = document.createElement('div');
+          c.className = 'xe-core';
+          c.style.animationDelay = ((i * 0.13) % 2.4).toFixed(2) + 's';
+          grid.appendChild(c);
+        }
+      }
+      const clock    = document.getElementById('arc-clock');
+      const clockBar = document.getElementById('arc-clock-bar');
+      const util     = document.getElementById('arc-util');
+      const utilBar  = document.getElementById('arc-util-bar');
+      const fps      = document.getElementById('arc-fps');
+      if (clock) {
+        setInterval(() => {
+          const mhz = 1900 + Math.round(Math.random() * 400);
+          const u   = 55 + Math.round(Math.random() * 40);
+          clock.textContent    = mhz + ' MHz';
+          clockBar.style.width = Math.min(100, Math.round((mhz - 1500) / 9)) + '%';
+          util.textContent     = u + ' %';
+          utilBar.style.width  = u + '%';
+          fps.textContent      = 58 + Math.round(Math.random() * 2);
+        }, 900);
+      }
+    })();
+
+    /* ---- Scroll reveal ---- */
+    (() => {
+      const items = [...document.querySelectorAll('.reveal')];
+      items.forEach((el, i) => { el.style.transitionDelay = ((i % 5) * 0.1) + 's'; });
+      const check = () => {
+        const vh = window.innerHeight;
+        items.forEach(el => {
+          if (el.classList.contains('revealed')) return;
+          const r = el.getBoundingClientRect();
+          if (r.top < vh - 20 && r.bottom > 0) el.classList.add('revealed');
+        });
+      };
+      window.addEventListener('scroll', check, { passive: true });
+      window.addEventListener('resize', check);
+      check();
+    })();
+
+
+    (() => {
+      /* ---- config ---- */
+      const TOTAL_FRAMES = 123;
+      const FRAME_DIR    = 'frames';
+      const frameFile    = i => `${FRAME_DIR}/ezgif-frame-${String(i).padStart(3, '0')}.jpg`;
+
+      /* ---- elements ---- */
+      const canvas       = document.getElementById('canvas');
+      const ctx          = canvas.getContext('2d');
+      const scrollArea   = document.getElementById('scroll-area');
+      const loader       = document.getElementById('loader');
+      const progressFill = document.getElementById('progress-fill');
+      const scrollPill   = document.getElementById('scroll-progress');
+      const frameCounter = document.getElementById('frame-counter');
+      const welcomeTitle = document.getElementById('welcome-title');
+
+      /* ---- preload ---- */
+      const images = [];
+      let loaded = 0;
+
+      function preload() {
+        return new Promise(resolve => {
+          for (let i = 1; i <= TOTAL_FRAMES; i++) {
+            const img = new Image();
+            img.src = frameFile(i);
+            img.onload = img.onerror = () => {
+              loaded++;
+              progressFill.style.width = `${(loaded / TOTAL_FRAMES) * 100}%`;
+              if (loaded === TOTAL_FRAMES) resolve();
+            };
+            images[i] = img;
+          }
+        });
+      }
+
+      /* ---- draw ---- */
+      let currentFrame = -1;
+
+      function drawFrame(index) {
+        if (index === currentFrame) return;
+        currentFrame = index;
+        const img = images[index];
+        if (!img || !img.complete) return;
+
+        // Match canvas size to image aspect ratio, fitting viewport
+        const vw = window.innerWidth;
+        const vh = window.innerHeight;
+        const iw = img.naturalWidth;
+        const ih = img.naturalHeight;
+        const scale = Math.min(vw / iw, vh / ih, 1);
+        const w = Math.round(iw * scale);
+        const h = Math.round(ih * scale);
+
+        if (canvas.width !== w || canvas.height !== h) {
+          canvas.width  = w;
+          canvas.height = h;
+        }
+        ctx.clearRect(0, 0, w, h);
+        ctx.drawImage(img, 0, 0, w, h);
+
+        frameCounter.textContent = `${index} / ${TOTAL_FRAMES}`;
+      }
+
+      /* ---- scroll handler: completes at 5% of total page scroll ---- */
+      function onScroll() {
+        const totalScrollable = document.documentElement.scrollHeight - window.innerHeight;
+        if (totalScrollable <= 0) return;
+
+        // 5% of the full page scroll range = the zone where animation completes
+        const animZone = totalScrollable * 0.05;
+
+        // current scroll position clamped to the animation zone
+        const scrollY  = window.scrollY;
+        let progress   = scrollY / animZone;
+        progress       = Math.max(0, Math.min(1, progress));
+
+        // map to frame index 1..TOTAL_FRAMES
+        const idx = Math.min(TOTAL_FRAMES, Math.floor(progress * TOTAL_FRAMES) + 1);
+        drawFrame(idx);
+
+        // UI updates
+        const pct = Math.round(progress * 100);
+        scrollPill.textContent = `${pct} %`;
+
+        const showUI = progress > 0 && progress < 1;
+        scrollPill.classList.toggle('visible', showUI);
+        frameCounter.classList.toggle('visible', showUI);
+
+        // fade the welcome headline out as the animation plays
+        if (welcomeTitle) welcomeTitle.style.opacity = String(Math.max(0, 1 - progress * 2.5));
+      }
+
+      /* ---- resize ---- */
+      function onResize() { currentFrame = -1; onScroll(); }
+
+      /* ---- init ---- */
+      preload().then(() => {
+        // We want the animation to finish when the user has scrolled 5% of the
+        // total page. Strategy:
+        //  1. Collapse scroll-area to 0 and measure everything else (restH).
+        //  2. Solve algebraically for the scroll-area height S such that:
+        //       animZone / totalScrollable = 0.05
+        //     where animZone = S - vph  (scroll distance while sticky)
+        //           totalScrollable = restH + S - vph
+        //     => (S - vph) / (restH + S - vph) = 0.05
+        //     => S - vph = 0.05*(restH + S - vph)
+        //     => S - vph = 0.05*restH + 0.05*S - 0.05*vph
+        //     => 0.95*S  = 0.05*restH + 0.95*vph
+        //     => S = vph + (0.05/0.95)*restH
+
+        // Hide scroll-area from layout (not just height:0 which keeps min-content)
+        scrollArea.style.position = 'absolute';
+        scrollArea.style.visibility = 'hidden';
+        scrollArea.style.height = '0px';
+
+        setTimeout(() => setTimeout(() => {
+          const restH = document.documentElement.scrollHeight; // page without scroll-area
+          const vph   = window.innerHeight;
+          const S     = vph + (0.05 / 0.95) * restH;
+
+          // Restore scroll-area to normal flow
+          scrollArea.style.position = '';
+          scrollArea.style.visibility = '';
+          scrollArea.style.height = Math.ceil(S) + 'px';
+
+          loader.classList.add('hidden');
+          setTimeout(() => loader.remove(), 700);
+          window.addEventListener('scroll', onScroll, { passive: true });
+          window.addEventListener('resize', onResize);
+          onScroll();
+        }));
+      });
+    })();
+  </script>
+</body>
+</html>

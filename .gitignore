@@ -1,0 +1,50 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build outputs
+dist/
+build/
+.next/
+out/
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.aicoding-chat-workspace
+
+# Tools and models (not needed for deployment)
+tools/
+*.onnx
+*.py
+
+# PowerShell server (local development only)
+server.ps1
+
+# Original source folder (keeping root files for deployment)
+scroll-animation/
+
+# PNG frames (only JPG needed for deployment)
+frames/*.png
