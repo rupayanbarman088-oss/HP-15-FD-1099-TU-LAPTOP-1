@@ -109,7 +109,7 @@
       '#a855f7', '#c084fc', '#8b5cf6', '#d946ef',   // purple
       '#fde047', '#facc15', '#fbbf24', '#f59e0b'    // yellow
     ];
-    const COUNT = 420;
+    const COUNT = 900;
 
     function ParticleField() {
       const canvasRef = useRef(null);
@@ -135,7 +135,7 @@
           y: Math.random() * H,
           vx: (Math.random() - 0.5) * 0.3,
           vy: (Math.random() - 0.5) * 0.3,
-          r: 1.1 + Math.random() * 2.3,
+          r: 0.55 + Math.random() * 1.35,
           color: PALETTE[(Math.random() * PALETTE.length) | 0],
           k: 0.0012 + Math.random() * 0.0033,   // spring stiffness -> varied lag
           damp: 0.92 + Math.random() * 0.045,   // damping -> smooth follow
@@ -198,10 +198,10 @@
             if (p.y < -m) p.y = H + m; else if (p.y > H + m) p.y = -m;
 
             /* glow halo + dot */
-            ctx.globalAlpha = 0.18;
+            ctx.globalAlpha = 0.12;
             ctx.fillStyle = p.color;
             ctx.beginPath();
-            ctx.arc(p.x, p.y, p.r * 2.6, 0, Math.PI * 2);
+            ctx.arc(p.x, p.y, p.r * 2.2, 0, Math.PI * 2);
             ctx.fill();
             ctx.globalAlpha = 0.95;
             ctx.beginPath();
