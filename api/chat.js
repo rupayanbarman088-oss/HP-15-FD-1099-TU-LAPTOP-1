@@ -122,24 +122,29 @@ export default async function handler(req, res) {
     }
 
     const model = process.env.OPENAI_MODEL || 'gpt-4o';
+    /* reasoning-style models (o1/o3/o4/gpt-5...) reject temperature + max_tokens */
+    const isReasoning = /^(o[134]|gpt-5)/i.test(model);
+    const reqBody = {
+      model,
+      messages: [{ role: 'system', content: system }, ...clean]
+    };
+    if (isReasoning) reqBody.max_completion_tokens = 600;
+    else { reqBody.temperature = 0.6; reqBody.max_tokens = 600; }
     const r = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${apiKey}`
       },
-      body: JSON.stringify({
-        model,
-        temperature: 0.6,
-        max_tokens: 600,
-        messages: [{ role: 'system', content: system }, ...clean]
-      })
+      body: JSON.stringify(reqBody)
     });
 
     if (!r.ok) {
       const detail = await r.text().catch(() => '');
       console.error('OpenAI error', r.status, detail);
-      return res.status(502).json({ error: 'unavailable' });
+      let oaiType = '', oaiCode = '';
+      try { const j = JSON.parse(detail); oaiType = (j.error && j.error.type) || ''; oaiCode = (j.error && j.error.code) || ''; } catch (e) { /* non-JSON detail */ }
+      return res.status(502).json({ error: 'unavailable', upstream: r.status, oaiType, oaiCode });
     }
 
     const data = await r.json();
