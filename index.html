@@ -59,6 +59,13 @@
       overflow-x: hidden;
     }
 
+    /* ---------- geometric network background ---------- */
+    #net-bg {
+      position: fixed; inset: 0;
+      z-index: -1;
+      pointer-events: none;
+    }
+
     /* ---------- loading overlay ---------- */
     #loader {
       position: fixed; inset: 0; z-index: 100;
@@ -461,6 +468,9 @@
 
   <!-- Fire-theme glow overlay (visible during 10s turbo mode) -->
   <div id="fire-overlay"></div>
+
+  <!-- Blue geometric network background -->
+  <canvas id="net-bg"></canvas>
 
   <!-- Loading overlay -->
   <div id="loader">
@@ -1006,6 +1016,100 @@
   </div>
 
   <script>
+    /* ---- Blue geometric network background (nodes, lines, triangle mesh) ---- */
+    (() => {
+      const cv = document.getElementById('net-bg');
+      if (!cv) return;
+      const ctx = cv.getContext('2d');
+      const DPR = Math.min(window.devicePixelRatio || 1, 2);
+
+      const draw = () => {
+        const W = window.innerWidth, H = window.innerHeight;
+        cv.width = W * DPR; cv.height = H * DPR;
+        cv.style.width = W + 'px'; cv.style.height = H + 'px';
+        ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+
+        // deep navy base gradient
+        const g = ctx.createLinearGradient(0, 0, 0, H);
+        g.addColorStop(0, '#061224');
+        g.addColorStop(0.45, '#0a2547');
+        g.addColorStop(0.75, '#061834');
+        g.addColorStop(1, '#04101f');
+        ctx.fillStyle = g;
+        ctx.fillRect(0, 0, W, H);
+
+        // upper zone: scattered nodes joined by faint lines
+        const nodes = [];
+        const count = Math.round((W * H) / 26000);
+        for (let i = 0; i < count; i++) {
+          nodes.push({ x: Math.random() * W, y: Math.random() * H * 0.72, r: 1 + Math.random() * 1.8 });
+        }
+        ctx.lineWidth = 1;
+        for (let i = 0; i < nodes.length; i++) {
+          for (let j = i + 1; j < nodes.length; j++) {
+            const dx = nodes[i].x - nodes[j].x, dy = nodes[i].y - nodes[j].y;
+            const d = Math.hypot(dx, dy);
+            if (d < 130) {
+              ctx.strokeStyle = 'rgba(0,229,255,' + (0.16 * (1 - d / 130)).toFixed(3) + ')';
+              ctx.beginPath(); ctx.moveTo(nodes[i].x, nodes[i].y); ctx.lineTo(nodes[j].x, nodes[j].y); ctx.stroke();
+            }
+          }
+        }
+        nodes.forEach(p => {
+          ctx.fillStyle = 'rgba(0,229,255,0.5)';
+          ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fill();
+        });
+
+        // lower zone: bright triangular mesh terrain
+        const meshTop = H * 0.55;
+        const cols = 12, rows = 6;
+        const gx = W / cols, gy = (H - meshTop) / rows;
+        const pts = [];
+        for (let r = 0; r <= rows; r++) {
+          pts[r] = [];
+          for (let c = 0; c <= cols; c++) {
+            pts[r][c] = {
+              x: c * gx + (Math.random() - 0.5) * gx * 0.7,
+              y: meshTop + r * gy + (Math.random() - 0.5) * gy * 0.7
+            };
+          }
+        }
+        for (let r = 0; r < rows; r++) {
+          for (let c = 0; c < cols; c++) {
+            const a = pts[r][c], b = pts[r][c + 1], d = pts[r + 1][c], e = pts[r + 1][c + 1];
+            [[a, b, d], [b, e, d]].forEach(t => {
+              const bright = Math.random();
+              ctx.fillStyle = bright > 0.82 ? 'rgba(0,229,255,0.16)'
+                            : bright > 0.60 ? 'rgba(0,229,255,0.07)'
+                            : 'rgba(0,229,255,0.02)';
+              ctx.beginPath();
+              ctx.moveTo(t[0].x, t[0].y); ctx.lineTo(t[1].x, t[1].y); ctx.lineTo(t[2].x, t[2].y);
+              ctx.closePath(); ctx.fill();
+              const depth = (t[0].y + t[1].y + t[2].y) / 3;
+              const alpha = 0.10 + 0.30 * ((depth - meshTop) / (H - meshTop));
+              ctx.strokeStyle = 'rgba(0,229,255,' + alpha.toFixed(3) + ')';
+              ctx.stroke();
+            });
+          }
+        }
+
+        // glowing starburst vertices
+        for (let i = 0; i < 14; i++) {
+          const p = pts[(Math.random() * (rows + 1)) | 0][(Math.random() * (cols + 1)) | 0];
+          const rad = 12 + Math.random() * 22;
+          const gg = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, rad);
+          gg.addColorStop(0, 'rgba(180,250,255,0.85)');
+          gg.addColorStop(0.3, 'rgba(0,229,255,0.35)');
+          gg.addColorStop(1, 'rgba(0,229,255,0)');
+          ctx.fillStyle = gg;
+          ctx.beginPath(); ctx.arc(p.x, p.y, rad, 0, Math.PI * 2); ctx.fill();
+        }
+      };
+
+      draw();
+      window.addEventListener('resize', draw);
+    })();
+
     /* ---- Fan turbo click + RPM meter + 10s fire theme ---- */
     (() => {
       const fan = document.querySelector('.fan-spin');
