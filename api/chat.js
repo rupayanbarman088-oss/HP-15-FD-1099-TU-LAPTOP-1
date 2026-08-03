@@ -86,20 +86,6 @@ function retrieve(query) {
     .map(s => s.chunk);
 }
 
-/* offline fallback answer built purely from the corpus (no API key needed) */
-function fallbackReply(query, ctx) {
-  if (ctx.length) {
-    return (
-      `Here's what I know from this website (offline mode - connect an OpenAI key for full AI answers):\n\n` +
-      ctx.map(c => `**${c.title}**\n${c.content}`).join('\n\n')
-    );
-  }
-  return (
-    "I'm Rupayan AI! Right now my OpenAI connection isn't configured, so I can only answer questions about this website. " +
-    'Try asking about the laptop specs, the Intel Core Ultra 5 chipset, the Cryo-Core cooling system, or how to contact Rupayan.'
-  );
-}
-
 /* ---------------- handler ---------------- */
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -132,7 +118,7 @@ export default async function handler(req, res) {
 
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) {
-      return res.status(200).json({ reply: fallbackReply(lastUser ? lastUser.content : '', ctx), degraded: true });
+      return res.status(503).json({ error: 'not-configured' });
     }
 
     const model = process.env.OPENAI_MODEL || 'gpt-4o';
@@ -153,7 +139,7 @@ export default async function handler(req, res) {
     if (!r.ok) {
       const detail = await r.text().catch(() => '');
       console.error('OpenAI error', r.status, detail);
-      return res.status(200).json({ reply: fallbackReply(lastUser ? lastUser.content : '', ctx), degraded: true });
+      return res.status(502).json({ error: 'unavailable' });
     }
 
     const data = await r.json();

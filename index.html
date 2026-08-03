@@ -71,6 +71,7 @@
       position: fixed; inset: 0;
       z-index: 1;
       pointer-events: none;
+      transition: opacity 0.6s ease;
     }
     /* all page content stacks above the particle field -> particles stay behind UI */
     main, footer { position: relative; z-index: 2; }
@@ -2033,14 +2034,14 @@
           });
           const data = await r.json().catch(() => ({}));
           typing.remove();
-          if (!r.ok && !data.reply) throw new Error(data.error || 'unavailable');
-          const reply = data.reply || 'Sorry, I could not generate a response. Please try again.';
+          if (!r.ok || !data.reply) throw new Error(data.error || 'unavailable');
+          const reply = data.reply;
           history.push({ role: 'assistant', content: reply });
           const bubble = addMsg('ai', '', true);
           await new Promise(res => streamInto(bubble, reply, res));
         } catch (e) {
           typing.remove();
-          addMsg('ai', 'I\u2019m sorry \u2014 Rupayan AI is temporarily unavailable. The AI service may be offline or still being configured. Please try again in a moment!');
+          addMsg('ai', 'Sorry, I\u2019m temporarily unavailable. Please try again later.');
         }
         busy = false; sendBtn.disabled = false;
         input.focus();
@@ -2636,6 +2637,15 @@
       addEventListener('mousemove', e => onPoint(e.clientX, e.clientY), { passive: true });
       addEventListener('touchstart', e => { const t = e.touches[0]; if (t) onPoint(t.clientX, t.clientY); }, { passive: true });
       addEventListener('touchmove', e => { const t = e.touches[0]; if (t) onPoint(t.clientX, t.clientY); }, { passive: true });
+
+      /* ---- hidden over the hero; active on every section below (e.g. Cryo-Core) ---- */
+      const heroArea = document.getElementById('scroll-area');
+      const syncFieldVisibility = () => {
+        const pastHero = !heroArea || heroArea.getBoundingClientRect().bottom <= 60;
+        cv.style.opacity = pastHero ? '1' : '0';
+      };
+      addEventListener('scroll', syncFieldVisibility, { passive: true });
+      syncFieldVisibility();
 
       /* ---- local follower swarm: nearest ~12 dots trail the cursor ---- */
       const FOLLOW_N = MOBILE ? 8 : 12;
