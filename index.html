@@ -66,12 +66,14 @@
       pointer-events: none;
     }
 
-    /* ---------- antigravity chase dots ---------- */
-    #chase-dots {
+    /* ---------- antigravity WebGL particle field ---------- */
+    #antigravity-field {
       position: fixed; inset: 0;
-      z-index: 30;
+      z-index: 1;
       pointer-events: none;
     }
+    /* all page content stacks above the particle field -> particles stay behind UI */
+    main, footer { position: relative; z-index: 2; }
 
     /* ---------- loading overlay ---------- */
     #loader {
@@ -540,8 +542,8 @@
   <!-- Blue geometric network background -->
   <canvas id="net-bg"></canvas>
 
-  <!-- Antigravity dots that chase the mouse pointer -->
-  <canvas id="chase-dots"></canvas>
+  <!-- Antigravity WebGL particle field (always behind content) -->
+  <canvas id="antigravity-field"></canvas>
 
   <!-- Loading overlay -->
   <div id="loader">
@@ -1104,124 +1106,6 @@
   </div>
 
   <script>
-    /* ---- Antigravity 3D sphere: rotating dot sphere that chases the cursor ---- */
-    (() => {
-      const cv = document.getElementById('chase-dots');
-      if (!cv) return;
-      const ctx = cv.getContext('2d');
-      const DPR = Math.min(window.devicePixelRatio || 1, 2);
-      const COLORS = ['#00f5ff', '#22d3ee', '#a855f7', '#c084fc', '#fde047', '#fbbf24', '#ff6b9d'];
-      const COUNT = 240;      // dots forming the sphere
-      const RADIUS = 110;     // sphere radius (px)
-      const PERSP = 460;      // perspective depth
-      let W = 0, H = 0;
-
-      const resize = () => {
-        W = innerWidth; H = innerHeight;
-        cv.width = W * DPR; cv.height = H * DPR;
-        ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-      };
-      resize();
-
-      /* ---- UI boxes the sphere must never cover ---- */
-      let boxes = [];
-      const refreshBoxes = () => {
-        boxes = [...document.querySelectorAll('.glass-panel, .site-nav, .welcome-title')]
-          .map(el => el.getBoundingClientRect())
-          .filter(r => r.width > 0 && r.height > 0);
-      };
-      refreshBoxes();
-      addEventListener('scroll', refreshBoxes, { passive: true });
-      setInterval(refreshBoxes, 800); /* catch layout shifts */
-      const inBoxes = (x, y) =>
-        boxes.some(b => x >= b.left && x <= b.right && y >= b.top && y <= b.bottom);
-
-      /* ---- mouse: follow only while the cursor is OUTSIDE the boxes ---- */
-      const mouse = { x: -9999, y: -9999, active: false, t: null };
-      addEventListener('mousemove', e => {
-        mouse.x = e.clientX; mouse.y = e.clientY;
-        clearTimeout(mouse.t);
-        if (inBoxes(mouse.x, mouse.y)) { mouse.active = false; return; }
-        mouse.active = true;
-        mouse.t = setTimeout(() => { mouse.active = false; }, 2500);
-      }, { passive: true });
-
-      /* ---- Fibonacci sphere point distribution ---- */
-      const GA = Math.PI * (3 - Math.sqrt(5)); // golden angle
-      const pts = Array.from({ length: COUNT }, (_, i) => {
-        const y = 1 - (i / (COUNT - 1)) * 2;
-        const r = Math.sqrt(Math.max(0, 1 - y * y));
-        const th = GA * i;
-        return {
-          x: Math.cos(th) * r, y, z: Math.sin(th) * r,
-          c: COLORS[(Math.random() * COLORS.length) | 0],
-          s: 0.9 + Math.random() * 1.4
-        };
-      });
-
-      /* ---- sphere state: spring-lag center + continuous rotation ---- */
-      const center = { x: W / 2, y: H * 0.42, vx: 0, vy: 0 };
-      let ax = 0, ay = 0, t = 0;
-      window.__sphere = { mouse, center }; /* debug hook */
-
-      const tick = () => {
-        t += 0.008;
-
-        /* rotation on slowly shifting axes -> motion in all directions */
-        ax += 0.008 + Math.sin(t * 0.7) * 0.004;
-        ay += 0.011 + Math.cos(t * 0.5) * 0.004;
-
-        /* center: chase cursor with smooth lag, or drift when idle */
-        if (mouse.active) {
-          center.vx += (mouse.x - center.x) * 0.0035;
-          center.vy += (mouse.y - center.y) * 0.0035;
-          center.vx *= 0.90; center.vy *= 0.90;
-        } else {
-          const wx = W / 2 + Math.cos(t * 0.9) * W * 0.30 + Math.sin(t * 0.37) * W * 0.08;
-          const wy = H / 2 + Math.sin(t * 0.7) * H * 0.28 + Math.cos(t * 0.53) * H * 0.07;
-          center.vx += (wx - center.x) * 0.0012;
-          center.vy += (wy - center.y) * 0.0012;
-          center.vx *= 0.95; center.vy *= 0.95;
-        }
-        center.x += center.vx; center.y += center.vy;
-
-        /* fade previous frame -> short soft trails */
-        ctx.globalCompositeOperation = 'destination-out';
-        ctx.fillStyle = 'rgba(0,0,0,0.30)';
-        ctx.fillRect(0, 0, W, H);
-        ctx.globalCompositeOperation = 'source-over';
-
-        const sinX = Math.sin(ax), cosX = Math.cos(ax);
-        const sinY = Math.sin(ay), cosY = Math.cos(ay);
-
-        for (const p of pts) {
-          /* rotate unit vector around Y then X */
-          const x1 = p.x * cosY + p.z * sinY;
-          const z1 = -p.x * sinY + p.z * cosY;
-          const y1 = p.y * cosX - z1 * sinX;
-          const z2 = p.y * sinX + z1 * cosX;
-
-          const scale = PERSP / (PERSP + z2 * RADIUS);
-          const sx = center.x + x1 * RADIUS * scale;
-          const sy = center.y + y1 * RADIUS * scale;
-
-          /* hide any dot that passes over a UI box */
-          if (inBoxes(sx, sy)) continue;
-
-          const depth = (1 - z2) / 2;   // 1 = front, 0 = back
-          ctx.globalAlpha = 0.25 + depth * 0.7;
-          ctx.fillStyle = p.c;
-          ctx.beginPath();
-          ctx.arc(sx, sy, p.s * scale * (0.6 + depth * 0.6), 0, Math.PI * 2);
-          ctx.fill();
-        }
-        ctx.globalAlpha = 1;
-        requestAnimationFrame(tick);
-      };
-      requestAnimationFrame(tick);
-      addEventListener('resize', () => { resize(); refreshBoxes(); });
-    })();
-
     /* ---- Neon plexus background: cyan+magenta perspective wave grid ---- */
     (() => {
       const cv = document.getElementById('net-bg');
@@ -1936,6 +1820,218 @@
         if (entries[0].isIntersecting) { init(); io.disconnect(); }
       }, { rootMargin: '400px' });
       io.observe(stage);
+    })();
+  </script>
+
+  <script>
+    /* ---- Antigravity particle field: premium WebGL glow sphere (original implementation) ---- */
+    (() => {
+      const cv = document.getElementById('antigravity-field');
+      if (!cv || typeof THREE === 'undefined') return;
+      const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const MOBILE = matchMedia('(pointer: coarse)').matches || innerWidth < 768;
+      const COUNT = MOBILE ? 700 : 1500;
+      const MAX_BOXES = 24;
+      const R = 15;
+
+      let renderer;
+      try {
+        renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: false, alpha: true, powerPreference: 'high-performance' });
+      } catch (e) { return; }
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, MOBILE ? 1.5 : 1.75));
+      renderer.setSize(innerWidth, innerHeight);
+      renderer.sortObjects = false;
+
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(42, innerWidth / innerHeight, 0.1, 300);
+      camera.position.set(0, 0, 60);
+
+      const visibleH = 2 * Math.tan((42 * Math.PI / 180) / 2) * 60;
+      const wpp = visibleH / innerHeight;          // world units per CSS pixel
+      const home = { x: 0, y: -visibleH * 0.43 };  // rest at bottom-center of hero
+
+      /* ---- palette: red / orange / yellow / purple / blue / pink ---- */
+      const PALETTE = ['#ff4d5e', '#ff7b2e', '#ffd23f', '#a855f7', '#4d7cff', '#ff6bb5'];
+
+      /* ---- Fibonacci sphere geometry ---- */
+      const pos = new Float32Array(COUNT * 3);
+      const col = new Float32Array(COUNT * 3);
+      const siz = new Float32Array(COUNT);
+      const rnd = new Float32Array(COUNT * 4);
+      const GA = Math.PI * (3 - Math.sqrt(5));
+      const tmp = new THREE.Color();
+      for (let i = 0; i < COUNT; i++) {
+        const y = 1 - (i / (COUNT - 1)) * 2;
+        const r = Math.sqrt(Math.max(0, 1 - y * y));
+        const th = GA * i;
+        pos[i * 3] = Math.cos(th) * r * R;
+        pos[i * 3 + 1] = y * R;
+        pos[i * 3 + 2] = Math.sin(th) * r * R;
+        tmp.set(PALETTE[(Math.random() * PALETTE.length) | 0]);
+        col[i * 3] = tmp.r; col[i * 3 + 1] = tmp.g; col[i * 3 + 2] = tmp.b;
+        siz[i] = 1.4 + Math.random() * 2.2;
+        rnd[i * 4] = Math.random(); rnd[i * 4 + 1] = Math.random();
+        rnd[i * 4 + 2] = Math.random(); rnd[i * 4 + 3] = Math.random();
+      }
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+      geo.setAttribute('aColor', new THREE.BufferAttribute(col, 3));
+      geo.setAttribute('aSize', new THREE.BufferAttribute(siz, 1));
+      geo.setAttribute('aRnd', new THREE.BufferAttribute(rnd, 4));
+
+      const uniforms = {
+        uTime: { value: 0 },
+        uBreath: { value: 1 },
+        uNoiseAmp: { value: REDUCED ? 0.4 : 1.7 },
+        uPixelRatio: { value: renderer.getPixelRatio() },
+        uResolution: { value: new THREE.Vector2(innerWidth, innerHeight) },
+        uBoxes: { value: Array.from({ length: MAX_BOXES }, () => new THREE.Vector4(0, 0, -1e6, -1e6)) },
+        uBoxCount: { value: 0 }
+      };
+
+      const VERT = `
+        attribute vec3 aColor;
+        attribute float aSize;
+        attribute vec4 aRnd;
+        uniform float uTime;
+        uniform float uBreath;
+        uniform float uNoiseAmp;
+        uniform float uPixelRatio;
+        uniform vec2 uResolution;
+        uniform vec4 uBoxes[24];
+        uniform int uBoxCount;
+        varying vec3 vColor;
+        varying float vFade;
+        varying float vTw;
+        void main() {
+          vec3 p = position;
+          float t = uTime;
+          /* organic per-particle drift (pseudo-noise) */
+          p.x += sin(t * (0.32 + aRnd.x * 0.24) + aRnd.y * 6.2831) * uNoiseAmp * (0.5 + aRnd.w);
+          p.y += cos(t * (0.28 + aRnd.z * 0.21) + aRnd.x * 6.2831) * uNoiseAmp * (0.5 + aRnd.x);
+          p.z += sin(t * (0.25 + aRnd.w * 0.27) + aRnd.z * 6.2831) * uNoiseAmp * (0.5 + aRnd.y);
+          p *= uBreath;
+          vec4 mv = modelViewMatrix * vec4(p, 1.0);
+          vec4 clip = projectionMatrix * mv;
+          vec2 ndc = clip.xy / clip.w;
+          vec2 px = vec2((ndc.x * 0.5 + 0.5) * uResolution.x, (0.5 - ndc.y * 0.5) * uResolution.y);
+          /* soft fade near viewport edges */
+          float edge = smoothstep(1.05, 0.80, max(abs(ndc.x), abs(ndc.y)));
+          /* soft fade inside UI boxes -> particles hide behind content */
+          float boxFade = 1.0;
+          for (int i = 0; i < 24; i++) {
+            if (i >= uBoxCount) break;
+            vec4 b = uBoxes[i];
+            vec2 d = max(b.xy - px, px - b.zw);
+            boxFade *= smoothstep(-2.0, 26.0, max(d.x, d.y));
+          }
+          vFade = edge * boxFade;
+          vTw = 0.72 + 0.28 * sin(uTime * (1.4 + aRnd.x * 1.2) + aRnd.y * 6.2831);
+          vColor = aColor;
+          gl_Position = clip;
+          gl_PointSize = aSize * uPixelRatio * (150.0 / -mv.z) * uBreath;
+        }`;
+      const FRAG = `
+        precision mediump float;
+        varying vec3 vColor;
+        varying float vFade;
+        varying float vTw;
+        void main() {
+          float d = length(gl_PointCoord - 0.5) * 2.0;
+          if (d > 1.0) discard;
+          float core = exp(-d * d * 7.0);
+          float halo = exp(-d * 2.4) * 0.32;
+          float a = (core + halo) * vFade * vTw;
+          if (a < 0.012) discard;
+          gl_FragColor = vec4(vColor * (0.7 + core * 0.55), a);
+        }`;
+
+      const mat = new THREE.ShaderMaterial({
+        uniforms,
+        vertexShader: VERT,
+        fragmentShader: FRAG,
+        transparent: true,
+        depthWrite: false,
+        depthTest: false,
+        blending: THREE.AdditiveBlending
+      });
+      const points = new THREE.Points(geo, mat);
+      const group = new THREE.Group();
+      group.add(points);
+      group.position.set(home.x, home.y, 0);
+      scene.add(group);
+
+      /* ---- UI boxes the particles must never cover ---- */
+      const refreshBoxes = () => {
+        const els = document.querySelectorAll('.glass-panel, .site-nav');
+        let n = 0;
+        for (const el of els) {
+          if (n >= MAX_BOXES) break;
+          const b = el.getBoundingClientRect();
+          if (b.width <= 0 || b.height <= 0) continue;
+          uniforms.uBoxes.value[n].set(b.left, b.top, b.right, b.bottom);
+          n++;
+        }
+        uniforms.uBoxCount.value = n;
+      };
+      refreshBoxes();
+      addEventListener('scroll', refreshBoxes, { passive: true });
+      setInterval(refreshBoxes, 800);
+
+      /* ---- pointer: mouse + touch ---- */
+      const pointer = { x: innerWidth / 2, y: innerHeight * 0.7, last: -1e9 };
+      const onPoint = (x, y) => { pointer.x = x; pointer.y = y; pointer.last = performance.now(); };
+      addEventListener('mousemove', e => onPoint(e.clientX, e.clientY), { passive: true });
+      addEventListener('touchstart', e => { const t = e.touches[0]; if (t) onPoint(t.clientX, t.clientY); }, { passive: true });
+      addEventListener('touchmove', e => { const t = e.touches[0]; if (t) onPoint(t.clientX, t.clientY); }, { passive: true });
+
+      /* ---- spring follow + rotation + breathing (rAF only, no DOM writes) ---- */
+      const vel = { x: 0, y: 0 };
+      const K = REDUCED ? 0.006 : 0.017, DAMP = 0.88;
+      let t = 0, last = performance.now();
+
+      const tick = () => {
+        requestAnimationFrame(tick);
+        const now = performance.now();
+        const dt = Math.min(0.05, (now - last) / 1000);
+        last = now;
+        t += dt;
+
+        /* inertia-eased follow; drift gently around home when idle */
+        const idle = now - pointer.last > 3500;
+        const tx = idle ? home.x + Math.cos(t * 0.23) * 4 : (pointer.x - innerWidth / 2) * wpp;
+        const ty = idle ? home.y + Math.sin(t * 0.31) * 2.6 : (innerHeight / 2 - pointer.y) * wpp;
+        vel.x += (tx - group.position.x) * K;
+        vel.y += (ty - group.position.y) * K;
+        vel.x *= DAMP; vel.y *= DAMP;
+        group.position.x += vel.x;
+        group.position.y += vel.y;
+
+        /* pointer-driven 3D tilt + slow ambient spin */
+        const nx = pointer.x / innerWidth - 0.5;
+        const ny = pointer.y / innerHeight - 0.5;
+        points.rotation.y += REDUCED ? 0.0005 : 0.0016;
+        group.rotation.x += ((-ny * 0.45) - group.rotation.x) * 0.05;
+        group.rotation.y += ((nx * 0.65) - group.rotation.y) * 0.05;
+
+        /* breathing */
+        uniforms.uBreath.value = 1 + Math.sin(t * 0.85) * (REDUCED ? 0.012 : 0.05);
+        uniforms.uTime.value = t;
+
+        renderer.render(scene, camera);
+      };
+      requestAnimationFrame(tick);
+
+      addEventListener('resize', () => {
+        renderer.setSize(innerWidth, innerHeight);
+        camera.aspect = innerWidth / innerHeight;
+        camera.updateProjectionMatrix();
+        uniforms.uResolution.value.set(innerWidth, innerHeight);
+        uniforms.uPixelRatio.value = renderer.getPixelRatio();
+        refreshBoxes();
+      });
+
+      window.__field = { group, uniforms, COUNT, MOBILE, REDUCED };
     })();
   </script>
 </body>
