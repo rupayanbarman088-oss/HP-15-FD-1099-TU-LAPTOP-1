@@ -1016,12 +1016,14 @@
   </div>
 
   <script>
-    /* ---- Blue geometric network background (nodes, lines, triangle mesh) ---- */
+    /* ---- Neon plexus background: cyan+magenta perspective wave grid ---- */
     (() => {
       const cv = document.getElementById('net-bg');
       if (!cv) return;
       const ctx = cv.getContext('2d');
       const DPR = Math.min(window.devicePixelRatio || 1, 2);
+      const CYAN = [0, 229, 255], TEAL = [64, 224, 208], PINK = [255, 105, 180];
+      const rgba = (c, a) => 'rgba(' + c[0] + ',' + c[1] + ',' + c[2] + ',' + a.toFixed(3) + ')';
 
       const draw = () => {
         const W = window.innerWidth, H = window.innerHeight;
@@ -1029,20 +1031,20 @@
         cv.style.width = W + 'px'; cv.style.height = H + 'px';
         ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
 
-        // deep navy base gradient
+        // dark navy-to-black base gradient
         const g = ctx.createLinearGradient(0, 0, 0, H);
-        g.addColorStop(0, '#061224');
-        g.addColorStop(0.45, '#0a2547');
-        g.addColorStop(0.75, '#061834');
-        g.addColorStop(1, '#04101f');
+        g.addColorStop(0, '#070b16');
+        g.addColorStop(0.45, '#0a0e17');
+        g.addColorStop(1, '#000000');
         ctx.fillStyle = g;
         ctx.fillRect(0, 0, W, H);
 
-        // upper zone: scattered nodes joined by faint lines
+        // upper zone: faint plexus of cyan + pink nodes
         const nodes = [];
-        const count = Math.round((W * H) / 26000);
+        const count = Math.round((W * H) / 32000);
         for (let i = 0; i < count; i++) {
-          nodes.push({ x: Math.random() * W, y: Math.random() * H * 0.72, r: 1 + Math.random() * 1.8 });
+          nodes.push({ x: Math.random() * W, y: Math.random() * H * 0.6, r: 1 + Math.random() * 1.8,
+                       c: Math.random() < 0.3 ? PINK : CYAN });
         }
         ctx.lineWidth = 1;
         for (let i = 0; i < nodes.length; i++) {
@@ -1050,57 +1052,69 @@
             const dx = nodes[i].x - nodes[j].x, dy = nodes[i].y - nodes[j].y;
             const d = Math.hypot(dx, dy);
             if (d < 130) {
-              ctx.strokeStyle = 'rgba(0,229,255,' + (0.16 * (1 - d / 130)).toFixed(3) + ')';
+              ctx.strokeStyle = rgba(nodes[i].c, 0.14 * (1 - d / 130));
               ctx.beginPath(); ctx.moveTo(nodes[i].x, nodes[i].y); ctx.lineTo(nodes[j].x, nodes[j].y); ctx.stroke();
             }
           }
         }
         nodes.forEach(p => {
-          ctx.fillStyle = 'rgba(0,229,255,0.5)';
+          ctx.fillStyle = rgba(p.c, 0.5);
           ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fill();
         });
 
-        // lower zone: bright triangular mesh terrain
-        const meshTop = H * 0.55;
-        const cols = 12, rows = 6;
-        const gx = W / cols, gy = (H - meshTop) / rows;
-        const pts = [];
-        for (let r = 0; r <= rows; r++) {
-          pts[r] = [];
-          for (let c = 0; c <= cols; c++) {
-            pts[r][c] = {
-              x: c * gx + (Math.random() - 0.5) * gx * 0.7,
-              y: meshTop + r * gy + (Math.random() - 0.5) * gy * 0.7
-            };
+        // perspective wave mesh receding to the horizon
+        const horizonY = H * 0.28;
+        const rows = 18, cols = 28, samples = 72;
+        const proj = (u, t) => {
+          const spread = Math.pow(t, 1.8);
+          const x = W / 2 + u * (W * 0.9) * spread;
+          const baseY = horizonY + Math.pow(t, 1.6) * (H - horizonY) * 1.15;
+          const wave = Math.sin(u * 3.2 + t * 5.0) * 24 * t
+                     + Math.sin(u * 7.0 - t * 3.0) * 9 * t;
+          return { x, y: baseY + wave };
+        };
+
+        // cross-lines (horizontal waves)
+        for (let r = 1; r <= rows; r++) {
+          const t = r / rows;
+          const pink = r % 3 === 0;
+          const col = pink ? PINK : (r % 3 === 1 ? CYAN : TEAL);
+          ctx.strokeStyle = rgba(col, 0.08 + 0.5 * t);
+          ctx.lineWidth = 0.5 + 1.3 * t;
+          ctx.beginPath();
+          for (let s = 0; s <= samples; s++) {
+            const p = proj(-1 + (2 * s) / samples, t);
+            s === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y);
           }
-        }
-        for (let r = 0; r < rows; r++) {
-          for (let c = 0; c < cols; c++) {
-            const a = pts[r][c], b = pts[r][c + 1], d = pts[r + 1][c], e = pts[r + 1][c + 1];
-            [[a, b, d], [b, e, d]].forEach(t => {
-              const bright = Math.random();
-              ctx.fillStyle = bright > 0.82 ? 'rgba(0,229,255,0.16)'
-                            : bright > 0.60 ? 'rgba(0,229,255,0.07)'
-                            : 'rgba(0,229,255,0.02)';
-              ctx.beginPath();
-              ctx.moveTo(t[0].x, t[0].y); ctx.lineTo(t[1].x, t[1].y); ctx.lineTo(t[2].x, t[2].y);
-              ctx.closePath(); ctx.fill();
-              const depth = (t[0].y + t[1].y + t[2].y) / 3;
-              const alpha = 0.10 + 0.30 * ((depth - meshTop) / (H - meshTop));
-              ctx.strokeStyle = 'rgba(0,229,255,' + alpha.toFixed(3) + ')';
-              ctx.stroke();
-            });
-          }
+          ctx.stroke();
         }
 
-        // glowing starburst vertices
-        for (let i = 0; i < 14; i++) {
-          const p = pts[(Math.random() * (rows + 1)) | 0][(Math.random() * (cols + 1)) | 0];
-          const rad = 12 + Math.random() * 22;
+        // longitudinal lines (converging to vanishing point)
+        for (let c = 0; c <= cols; c++) {
+          const u = -1 + (2 * c) / cols;
+          const pink = c % 4 === 0;
+          const col = pink ? PINK : CYAN;
+          ctx.strokeStyle = rgba(col, pink ? 0.35 : 0.22);
+          ctx.lineWidth = 0.6;
+          ctx.beginPath();
+          for (let s = 1; s <= samples; s++) {
+            const p = proj(u, s / samples);
+            s === 1 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y);
+          }
+          ctx.stroke();
+        }
+
+        // glowing nodes at random mesh intersections
+        for (let i = 0; i < 26; i++) {
+          const t = 0.12 + Math.random() * 0.88;
+          const p = proj(-1 + Math.random() * 2, t);
+          const pink = Math.random() < 0.3;
+          const col = pink ? PINK : CYAN;
+          const rad = (6 + Math.random() * 14) * (0.5 + t);
           const gg = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, rad);
-          gg.addColorStop(0, 'rgba(180,250,255,0.85)');
-          gg.addColorStop(0.3, 'rgba(0,229,255,0.35)');
-          gg.addColorStop(1, 'rgba(0,229,255,0)');
+          gg.addColorStop(0, 'rgba(255,255,255,0.9)');
+          gg.addColorStop(0.3, rgba(col, 0.45));
+          gg.addColorStop(1, rgba(col, 0));
           ctx.fillStyle = gg;
           ctx.beginPath(); ctx.arc(p.x, p.y, rad, 0, Math.PI * 2); ctx.fill();
         }
