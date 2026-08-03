@@ -49,7 +49,7 @@ const SITE_CORPUS = [
     title: 'Rupayan AI Assistant',
     keywords: ['rupayan', 'ai', 'assistant', 'chat', 'bot', 'rai', 'ask', 'help'],
     content:
-      'Rupayan AI (RAI) is the built-in assistant of this website, reachable from the purple RAI nav button or the floating button at the bottom-right. It knows the site content via retrieval-augmented generation and answers questions about the laptop, chipset, cooling and features. For non-site questions it answers generally via OpenAI.'
+      'Rupayan AI (RAI) is the built-in assistant of this website, opened from the floating purple star button at the bottom-right corner of every page. It knows the site content via retrieval-augmented generation and answers questions about the laptop, chipset, cooling and features. For non-site questions it answers generally via OpenAI.'
   },
   {
     title: 'Contact Information',

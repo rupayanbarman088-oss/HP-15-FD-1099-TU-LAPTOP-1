@@ -349,34 +349,6 @@
     .contact-status.err { color: #ff6b6b; text-shadow: 0 0 12px rgba(255, 107, 107, 0.4); }
     .contact-status.busy { color: #00f5ff; }
 
-    /* ---------- RAI hero section ---------- */
-    .rai-orb {
-      width: 120px; height: 120px; margin: 0 auto 26px;
-      border-radius: 50%;
-      background: radial-gradient(circle at 35% 30%, rgba(192, 132, 252, 0.95), rgba(88, 28, 135, 0.9) 55%, rgba(20, 8, 40, 1));
-      box-shadow: 0 0 46px rgba(168, 85, 247, 0.55), 0 0 120px rgba(168, 85, 247, 0.25), inset 0 0 30px rgba(255, 255, 255, 0.12);
-      animation: rai-orb-float 5s ease-in-out infinite;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 42px;
-    }
-    @keyframes rai-orb-float {
-      0%, 100% { transform: translateY(0); box-shadow: 0 0 46px rgba(168,85,247,0.55), 0 0 120px rgba(168,85,247,0.25), inset 0 0 30px rgba(255,255,255,0.12); }
-      50%      { transform: translateY(-14px); box-shadow: 0 0 66px rgba(168,85,247,0.8), 0 0 160px rgba(168,85,247,0.35), inset 0 0 30px rgba(255,255,255,0.18); }
-    }
-    .rai-hero-btn {
-      border: 1px solid rgba(192, 132, 252, 0.7);
-      border-radius: 999px;
-      padding: 14px 40px;
-      background: rgba(168, 85, 247, 0.16);
-      color: #d8b4fe;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 13px; letter-spacing: 3px; text-transform: uppercase;
-      cursor: pointer;
-      box-shadow: 0 0 22px rgba(168, 85, 247, 0.3);
-      transition: all .3s;
-    }
-    .rai-hero-btn:hover { background: rgba(168, 85, 247, 0.32); box-shadow: 0 0 40px rgba(168, 85, 247, 0.6); transform: translateY(-2px); }
-
     /* ---------- Rupayan AI floating chat ---------- */
     #rai-fab {
       position: fixed;
@@ -1450,23 +1422,6 @@
       </section>
       <!-- ======== End Contact ======== -->
 
-      <!-- ======== Rupayan AI (RAI) ======== -->
-      <section class="mb-32" id="rai">
-        <div class="glass-panel rounded-xl relative overflow-hidden px-6 py-14 md:px-12 text-center">
-          <div class="absolute top-[-80px] right-[16%] w-80 h-80 rounded-full blur-[130px] pointer-events-none glow-orb" style="background:rgba(168,85,247,0.14)"></div>
-
-          <div class="relative z-10 max-w-3xl mx-auto">
-            <span class="inline-block px-3 py-1 rounded-full border text-xs uppercase tracking-widest font-label-sm mb-6" style="border-color:rgba(192,132,252,0.45); color:#c084fc">Built-In Assistant</span>
-            <div class="rai-orb">&#10035;</div>
-            <h2 class="font-display-lg text-on-surface leading-tight mb-4" style="font-size:clamp(26px,4.5vw,56px)">Meet Rupayan&nbsp;AI</h2>
-            <p class="text-on-surface-variant max-w-2xl mx-auto mb-4 text-lg">Your built-in AI companion that knows everything about this machine &mdash; specs, cooling, chipset, benchmarks and more. Ask it anything.</p>
-            <p class="font-label-sm text-label-sm text-on-surface-variant mb-9 opacity-70">Powered by OpenAI &middot; Retrieval-Augmented on this website&rsquo;s content</p>
-            <button id="rai-open-hero" class="rai-hero-btn">Launch Rupayan AI</button>
-          </div>
-        </div>
-      </section>
-      <!-- ======== End Rupayan AI ======== -->
-
     </main>
 
     <!-- Footer -->
@@ -2066,8 +2021,6 @@
       fab.addEventListener('click', () => chat.classList.contains('open') ? closeChat() : openChat());
       document.getElementById('rai-close').addEventListener('click', closeChat);
       document.addEventListener('keydown', e => { if (e.key === 'Escape') closeChat(); });
-      const heroBtn = document.getElementById('rai-open-hero');
-      if (heroBtn) heroBtn.addEventListener('click', openChat);
 
       /* theme toggle (chat window) */
       document.getElementById('rai-theme').addEventListener('click', () => chat.classList.toggle('rai-light'));
