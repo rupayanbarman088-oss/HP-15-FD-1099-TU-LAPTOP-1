@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HP INTEL SYSTEM · 3D Laptop</title>
+  <style>
+    :root {
+      --w: 360px;   /* base width  */
+      --d: 240px;   /* base depth  */
+      --t: 16px;    /* base thickness */
+      --sh: 230px;  /* lid height  */
+      --lt: 10px;   /* lid thickness */
+      --accent: #00f5ff;
+      --aluminum: #23262d;
+      --aluminum-2: #16181d;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      height: 100%;
+      overflow: hidden;
+      background:
+        radial-gradient(ellipse at 50% 120%, rgba(0,120,180,0.16), transparent 60%),
+        radial-gradient(ellipse at 80% -10%, rgba(255,105,180,0.07), transparent 55%),
+        linear-gradient(180deg, #070b16 0%, #0a0e17 55%, #000 100%);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      color: #e8f4ff;
+      user-select: none;
+    }
+
+    /* faint grid floor backdrop */
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image:
+        linear-gradient(rgba(0,229,255,0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,229,255,0.05) 1px, transparent 1px);
+      background-size: 48px 48px;
+      mask-image: radial-gradient(ellipse at 50% 60%, black 30%, transparent 75%);
+      pointer-events: none;
+    }
+
+    .topbar {
+      position: fixed; top: 0; left: 0; right: 0;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 18px 28px; z-index: 10;
+    }
+    .brand {
+      font-weight: 800; letter-spacing: 4px; font-size: 15px;
+      text-shadow: 0 0 14px rgba(0,245,255,0.5);
+    }
+    .brand span { color: var(--accent); }
+    .back-link {
+      color: rgba(232,244,255,0.6); text-decoration: none;
+      font-size: 12px; letter-spacing: 2px; text-transform: uppercase;
+      padding: 8px 14px; border: 1px solid rgba(255,255,255,0.14);
+      border-radius: 999px; transition: all .3s;
+    }
+    .back-link:hover { color: var(--accent); border-color: rgba(0,245,255,0.5); box-shadow: 0 0 16px rgba(0,245,255,0.25); }
+
+    /* ---------- 3D stage ---------- */
+    .stage {
+      position: fixed; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      cursor: grab;
+    }
+    .stage:active { cursor: grabbing; }
+    .scene { perspective: 1500px; }
+    .zoom { transform: scale3d(var(--zoom, 1), var(--zoom, 1), var(--zoom, 1)); transform-style: preserve-3d; }
+    .laptop {
+      position: relative;
+      width: 0; height: 0;
+      transform-style: preserve-3d;
+      transform: rotateX(var(--pitch, -16deg)) rotateY(var(--yaw, 0deg));
+      will-change: transform;
+    }
+
+    /* every face is absolutely centered on the group origin, then transformed */
+    .face {
+      position: absolute;
+      backface-visibility: hidden;
+    }
+
+    /* ---------- BASE (keyboard deck box) ---------- */
+    .deck {
+      width: var(--w); height: var(--d);
+      left: calc(var(--w) / -2); top: calc(var(--d) / -2);
+      transform: rotateX(90deg) translateZ(calc(var(--t) / 2));
+      background: linear-gradient(180deg, #2b2f37 0%, var(--aluminum) 40%, #1d2026 100%);
+      border-radius: 10px;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.06);
+      padding: 14px 16px 10px;
+      display: flex; flex-direction: column;
+    }
+    .base-bottom {
+      width: var(--w); height: var(--d);
+      left: calc(var(--w) / -2); top: calc(var(--d) / -2);
+      transform: rotateX(-90deg) translateZ(calc(var(--t) / 2));
+      background: #101216; border-radius: 10px;
+    }
+    .base-front {
+      width: var(--w); height: var(--t);
+      left: calc(var(--w) / -2); top: calc(var(--t) / -2);
+      transform: translateZ(calc(var(--d) / 2));
+      background: linear-gradient(180deg, #3a3f49, #191c21);
+      border-radius: 3px;
+    }
+    .base-back {
+      width: var(--w); height: var(--t);
+      left: calc(var(--w) / -2); top: calc(var(--t) / -2);
+      transform: rotateY(180deg) translateZ(calc(var(--d) / 2));
+      background: linear-gradient(180deg, #32363e, #14161a);
+      border-radius: 3px;
+    }
+    .base-left {
+      width: var(--d); height: var(--t);
+      left: calc(var(--d) / -2); top: calc(var(--t) / -2);
+      transform: rotateY(-90deg) translateZ(calc(var(--w) / 2));
+      background: linear-gradient(180deg, #34383f, #16181d);
+      border-radius: 3px;
+    }
+    .base-right {
+      width: var(--d); height: var(--t);
+      left: calc(var(--d) / -2); top: calc(var(--t) / -2);
+      transform: rotateY(90deg) translateZ(calc(var(--w) / 2));
+      background: linear-gradient(180deg, #34383f, #16181d);
+      border-radius: 3px;
+    }
+
+    /* keyboard */
+    .keyboard {
+      flex: 0 0 auto;
+      height: 118px;
+      background: linear-gradient(180deg, #101216, #14171c);
+      border-radius: 6px;
+      box-shadow: inset 0 1px 4px rgba(0,0,0,0.8);
+      padding: 6px;
+      display: flex; flex-direction: column; gap: 3px;
+    }
+    .kb-row { display: flex; gap: 3px; flex: 1; }
+    .key {
+      flex: 1;
+      background: linear-gradient(180deg, #262a31, #191c21);
+      border-radius: 2px;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.05), 0 1px 1px rgba(0,0,0,0.6);
+    }
+    .key.space { flex: 4; }
+    .key.glow { animation: key-glow 3s ease-in-out infinite; }
+    @keyframes key-glow {
+      0%, 100% { box-shadow: inset 0 1px 0 rgba(255,255,255,0.05), 0 1px 1px rgba(0,0,0,0.6); }
+      50%      { box-shadow: inset 0 0 6px rgba(0,245,255,0.4), 0 0 6px rgba(0,245,255,0.25); }
+    }
+    .trackpad {
+      margin: 10px auto 0;
+      width: 42%; height: 52px;
+      background: linear-gradient(180deg, #22262d, #1a1d23);
+      border-radius: 6px;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05), inset 0 2px 6px rgba(0,0,0,0.5);
+    }
+
+    /* ---------- LID (screen box, hinged at base back edge) ---------- */
+    .lid {
+      position: absolute;
+      width: 0; height: 0;
+      transform-style: preserve-3d;
+      transform: translate3d(0, calc(var(--t) / -2), calc(var(--d) / -2)) rotateX(var(--lid-rot, 20deg));
+      will-change: transform;
+    }
+    .screen-face {
+      width: var(--w); height: var(--sh);
+      left: calc(var(--w) / -2); top: calc(var(--sh) * -1);
+      transform: translateZ(calc(var(--lt) / 2));
+      background: #0c0e12;
+      border-radius: 10px;
+      box-shadow: inset 0 0 0 4px #101216, inset 0 0 0 5px rgba(255,255,255,0.05);
+      padding: 10px;
+      overflow: hidden;
+    }
+    .lid-back {
+      width: var(--w); height: var(--sh);
+      left: calc(var(--w) / -2); top: calc(var(--sh) * -1);
+      transform: rotateY(180deg) translateZ(calc(var(--lt) / 2));
+      background: linear-gradient(135deg, #2e323a 0%, var(--aluminum) 45%, #191c21 100%);
+      border-radius: 10px;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.07);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .lid-logo {
+      font-size: 44px; font-weight: 200; font-style: italic;
+      color: rgba(230,240,255,0.85);
+      text-shadow: 0 0 18px rgba(0,245,255,0.55), 0 0 40px rgba(0,245,255,0.25);
+      letter-spacing: 2px;
+    }
+    .lid-top {
+      width: var(--w); height: var(--lt);
+      left: calc(var(--w) / -2); top: calc(var(--sh) * -1 - var(--lt) / 2);
+      transform: rotateX(90deg);
+      background: #2c3038; border-radius: 4px;
+    }
+    .lid-side-l {
+      width: var(--lt); height: var(--sh);
+      left: calc(var(--w) / -2 - var(--lt) / 2); top: calc(var(--sh) * -1);
+      transform: rotateY(-90deg);
+      background: #22252c;
+    }
+    .lid-side-r {
+      width: var(--lt); height: var(--sh);
+      left: calc(var(--w) / 2 - var(--lt) / 2); top: calc(var(--sh) * -1);
+      transform: rotateY(90deg);
+      background: #22252c;
+    }
+
+    /* screen content */
+    .display {
+      width: 100%; height: 100%;
+      border-radius: 6px;
+      background:
+        radial-gradient(ellipse at 30% 0%, rgba(0,180,255,0.22), transparent 55%),
+        radial-gradient(ellipse at 90% 100%, rgba(255,105,180,0.14), transparent 50%),
+        linear-gradient(160deg, #061826 0%, #050d18 60%, #02060c 100%);
+      display: flex; flex-direction: column;
+      padding: 12px 14px;
+      transition: opacity .6s ease, filter .6s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    .display::after { /* subtle scanline sheen */
+      content: '';
+      position: absolute; inset: 0;
+      background: linear-gradient(115deg, transparent 30%, rgba(255,255,255,0.045) 45%, transparent 60%);
+      pointer-events: none;
+    }
+    .screen-face.off .display { opacity: 0.06; filter: saturate(0); }
+    .disp-top { display: flex; justify-content: space-between; align-items: baseline; }
+    .disp-brand { font-size: 11px; font-weight: 800; letter-spacing: 3px; color: var(--accent); text-shadow: 0 0 10px rgba(0,245,255,0.6); }
+    .disp-clock { font-size: 11px; color: rgba(232,244,255,0.75); font-variant-numeric: tabular-nums; }
+    .disp-hero {
+      margin-top: 26px;
+      font-size: 26px; font-weight: 800; letter-spacing: 1px; line-height: 1.15;
+      background: linear-gradient(90deg, #ffffff, #9be9ff);
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+    }
+    .disp-sub { margin-top: 6px; font-size: 10px; letter-spacing: 2px; color: rgba(232,244,255,0.5); text-transform: uppercase; }
+    .disp-stats { margin-top: auto; display: flex; gap: 8px; }
+    .stat {
+      flex: 1;
+      background: rgba(255,255,255,0.045);
+      border: 1px solid rgba(0,245,255,0.16);
+      border-radius: 6px;
+      padding: 6px 8px;
+    }
+    .stat b { display: block; font-size: 13px; color: var(--accent); font-variant-numeric: tabular-nums; }
+    .stat span { font-size: 8px; letter-spacing: 1px; color: rgba(232,244,255,0.55); text-transform: uppercase; }
+    .stat .bar { margin-top: 4px; height: 3px; border-radius: 2px; background: rgba(255,255,255,0.1); overflow: hidden; }
+    .stat .bar i { display: block; height: 100%; width: 40%; background: linear-gradient(90deg, var(--accent), #ff69b4); border-radius: 2px; animation: bar-pulse 2.4s ease-in-out infinite; }
+    .stat:nth-child(2) .bar i { animation-delay: -0.8s; }
+    .stat:nth-child(3) .bar i { animation-delay: -1.6s; }
+    @keyframes bar-pulse {
+      0%, 100% { width: 24%; }
+      50%      { width: 86%; }
+    }
+
+    /* soft ground shadow */
+    .ground-shadow {
+      width: calc(var(--w) * 1.5); height: calc(var(--d) * 1.7);
+      left: calc(var(--w) * -0.75); top: calc(var(--d) * -0.85);
+      transform: rotateX(-90deg) translateZ(calc(var(--t) / 2 + 30px));
+      background: radial-gradient(ellipse, rgba(0,0,0,0.55), transparent 65%);
+      filter: blur(10px);
+      backface-visibility: visible;
+    }
+
+    /* ---------- HUD ---------- */
+    .hud {
+      position: fixed; bottom: 22px; left: 50%;
+      transform: translateX(-50%);
+      display: flex; gap: 10px; z-index: 10;
+    }
+    .chip {
+      background: rgba(10,14,23,0.6);
+      border: 1px solid rgba(255,255,255,0.12);
+      backdrop-filter: blur(8px);
+      border-radius: 999px;
+      padding: 9px 16px;
+      font-size: 11px; letter-spacing: 1px;
+      color: rgba(232,244,255,0.7);
+      white-space: nowrap;
+    }
+    .chip b { color: var(--accent); font-weight: 700; }
+    .hint {
+      position: fixed; top: 74px; left: 50%; transform: translateX(-50%);
+      font-size: 12px; letter-spacing: 2.5px; text-transform: uppercase;
+      color: rgba(0,245,255,0.75); text-shadow: 0 0 10px rgba(0,245,255,0.4);
+      animation: hint-pulse 2.2s ease-in-out infinite;
+      z-index: 10; text-align: center;
+    }
+    @keyframes hint-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.45; } }
+
+    @media (max-width: 720px) {
+      :root { --w: 280px; --d: 190px; --sh: 185px; }
+      .hud { flex-wrap: wrap; justify-content: center; width: 92%; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="topbar">
+    <div class="brand">HP INTEL <span>SYSTEM</span></div>
+    <a class="back-link" href="index.html">&larr; Back to site</a>
+  </div>
+
+  <div class="hint">Move your mouse to control the laptop &nbsp;·&nbsp; scroll to zoom &nbsp;·&nbsp; click to toggle screen</div>
+
+  <div class="stage" id="stage">
+    <div class="scene">
+      <div class="zoom" id="zoom">
+        <div class="laptop" id="laptop">
+
+          <!-- ground shadow -->
+          <div class="face ground-shadow"></div>
+
+          <!-- base -->
+          <div class="face base-bottom"></div>
+          <div class="face base-front"></div>
+          <div class="face base-back"></div>
+          <div class="face base-left"></div>
+          <div class="face base-right"></div>
+          <div class="face deck">
+            <div class="keyboard" id="keyboard"></div>
+            <div class="trackpad"></div>
+          </div>
+
+          <!-- lid (hinged) -->
+          <div class="lid" id="lid">
+            <div class="face lid-top"></div>
+            <div class="face lid-side-l"></div>
+            <div class="face lid-side-r"></div>
+            <div class="face lid-back"><div class="lid-logo">hp</div></div>
+            <div class="face screen-face" id="screen-face">
+              <div class="display">
+                <div class="disp-top">
+                  <div class="disp-brand">HP INTEL SYSTEM</div>
+                  <div class="disp-clock" id="clock">--:--:--</div>
+                </div>
+                <div class="disp-hero">CRYO-CORE<br>ULTRA 9</div>
+                <div class="disp-sub">Interactive 3D Showcase</div>
+                <div class="disp-stats">
+                  <div class="stat"><b id="s-cpu">42%</b><span>CPU</span><div class="bar"><i></i></div></div>
+                  <div class="stat"><b id="s-gpu">61%</b><span>GPU</span><div class="bar"><i></i></div></div>
+                  <div class="stat"><b>32GB</b><span>MEM</span><div class="bar"><i></i></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="hud">
+    <div class="chip">ORBIT <b id="hud-yaw">0°</b></div>
+    <div class="chip">LID <b id="hud-lid">open</b></div>
+    <div class="chip">ZOOM <b id="hud-zoom">100%</b></div>
+    <div class="chip">SCREEN <b id="hud-power">on</b></div>
+  </div>
+
+  <script>
+    /* ---------- build keyboard ---------- */
+    (() => {
+      const kb = document.getElementById('keyboard');
+      const layout = [13, 13, 12, 11, 7];
+      layout.forEach((count, rowIdx) => {
+        const row = document.createElement('div');
+        row.className = 'kb-row';
+        for (let i = 0; i < count; i++) {
+          const key = document.createElement('div');
+          key.className = 'key';
+          if (rowIdx === layout.length - 1 && i === 3) key.classList.add('space');
+          if (Math.random() < 0.12) key.classList.add('glow');
+          row.appendChild(key);
+        }
+        kb.appendChild(row);
+      });
+    })();
+
+    /* ---------- live clock + fake telemetry ---------- */
+    setInterval(() => {
+      document.getElementById('clock').textContent = new Date().toLocaleTimeString('en-GB');
+    }, 1000);
+    setInterval(() => {
+      document.getElementById('s-cpu').textContent = (25 + Math.random() * 55 | 0) + '%';
+      document.getElementById('s-gpu').textContent = (30 + Math.random() * 60 | 0) + '%';
+    }, 1800);
+
+    /* ---------- mouse-controlled 3D ---------- */
+    (() => {
+      const laptop = document.getElementById('laptop');
+      const zoomEl = document.getElementById('zoom');
+      const screenFace = document.getElementById('screen-face');
+      const hudYaw = document.getElementById('hud-yaw');
+      const hudLid = document.getElementById('hud-lid');
+      const hudZoom = document.getElementById('hud-zoom');
+      const hudPower = document.getElementById('hud-power');
+
+      // current (rendered) values
+      let yaw = -18, pitch = -16, lidRot = 20, zoom = 1;
+      // target values driven by mouse
+      let tYaw = -18, tPitch = -16, tLid = 20, tZoom = 1;
+      let screenOn = true;
+
+      const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+
+      const onPointer = (nx, ny) => {          // nx, ny in [0,1]
+        tYaw   = (nx - 0.5) * 150;             // orbit -75°..+75°
+        tPitch = -9 - ny * 15;                 // tilt  -9°..-24°
+        tLid   = 25 - ny * 108;                // lid   +25°(open)..-83°(closed)
+      };
+
+      window.addEventListener('mousemove', e => {
+        onPointer(e.clientX / innerWidth, e.clientY / innerHeight);
+      }, { passive: true });
+
+      window.addEventListener('touchmove', e => {
+        const t = e.touches[0];
+        onPointer(t.clientX / innerWidth, t.clientY / innerHeight);
+      }, { passive: true });
+
+      // wheel zoom
+      window.addEventListener('wheel', e => {
+        tZoom = clamp(tZoom - e.deltaY * 0.0012, 0.55, 1.9);
+      }, { passive: true });
+
+      // click toggles screen power (ignore drag-ish clicks)
+      let downX = 0, downY = 0;
+      window.addEventListener('pointerdown', e => { downX = e.clientX; downY = e.clientY; });
+      window.addEventListener('pointerup', e => {
+        if (Math.hypot(e.clientX - downX, e.clientY - downY) < 6) {
+          screenOn = !screenOn;
+          screenFace.classList.toggle('off', !screenOn);
+          hudPower.textContent = screenOn ? 'on' : 'off';
+        }
+      });
+
+      /* smooth animation loop */
+      const lerp = (a, b, k) => a + (b - a) * k;
+      const tick = () => {
+        yaw   = lerp(yaw,   tYaw,   0.075);
+        pitch = lerp(pitch, tPitch, 0.075);
+        lidRot= lerp(lidRot,tLid,   0.085);
+        zoom  = lerp(zoom,  tZoom,  0.10);
+
+        laptop.style.setProperty('--yaw', yaw.toFixed(2) + 'deg');
+        laptop.style.setProperty('--pitch', pitch.toFixed(2) + 'deg');
+        laptop.style.setProperty('--lid-rot', lidRot.toFixed(2) + 'deg');
+        zoomEl.style.setProperty('--zoom', zoom.toFixed(3));
+
+        hudYaw.textContent = Math.round(yaw) + '\u00B0';
+        const openAngle = lidRot + 90;         // 0 = closed, 90 = upright
+        hudLid.textContent = openAngle > 70 ? 'open' : openAngle > 25 ? 'half' : 'closed';
+        hudZoom.textContent = Math.round(zoom * 100) + '%';
+
+        requestAnimationFrame(tick);
+      };
+      tick();
+    })();
+  </script>
+</body>
+</html>
