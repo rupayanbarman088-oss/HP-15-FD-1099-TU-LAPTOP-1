@@ -155,10 +155,13 @@ async function askGemini(apiKey, system, clean) {
         throw err;
       }
       const data = await r.json();
-      const parts = data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts;
+      const cand = data.candidates && data.candidates[0];
+      const parts = cand && cand.content && cand.content.parts;
       const text = parts ? parts.map(p => p.text || '').join('') : '';
-      if (text) return text;
+      const meta = { finishReason: (cand && cand.finishReason) || '', model };
+      if (text) return { text, meta };
       lastErr = new Error('gemini-empty');
+      lastErr.meta = meta;
     } catch (e) {
       if (e.upstream) { lastErr = e; continue; }
       throw e;
@@ -217,8 +220,8 @@ export default async function handler(req, res) {
     }
     if (geminiKey) {
       try {
-        const reply = await askGemini(geminiKey, system, clean);
-        if (reply) return res.status(200).json({ reply, provider: 'gemini' });
+        const out = await askGemini(geminiKey, system, clean);
+        if (out && out.text) return res.status(200).json({ reply: out.text, provider: 'gemini', gModel: out.meta && out.meta.model, gFinish: out.meta && out.meta.finishReason });
         return res.status(502).json({ error: 'empty-response' });
       } catch (err) {
         return res.status(502).json({ error: 'unavailable', upstream: err.upstream || 0, gType: err.gType || '' });
