@@ -14,7 +14,7 @@
  *   GEMINI_API_KEY  - Google AI Studio key (also accepts GOOGLE_API_KEY);
  *                     used when OpenAI is missing or failing
  *   GEMINI_MODEL    - optional Gemini model override
- *                     (default: auto-fallback chain gemini-flash-latest -> 2.5 -> 2.0 -> 1.5)
+ *                     (default: auto-fallback chain gemini-flash-latest -> 2.5 -> 2.0)
  */
 
 /* ---------------- website knowledge index (RAG corpus) ---------------- */
@@ -126,7 +126,7 @@ async function askGemini(apiKey, system, clean) {
   const preferred = process.env.GEMINI_MODEL;
   const models = preferred
     ? [preferred]
-    : ['gemini-flash-latest', 'gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
+    : ['gemini-flash-latest', 'gemini-2.5-flash', 'gemini-2.0-flash'];
   let lastErr = null;
   for (const model of models) {
     try {
@@ -139,10 +139,7 @@ async function askGemini(apiKey, system, clean) {
         body: JSON.stringify({
           systemInstruction: { parts: [{ text: system }] },
           contents: clean.map(m => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] })),
-          generationConfig: /^gemini-1\.5/.test(model)
-            ? { temperature: 0.6, maxOutputTokens: 600 }
-            /* thinking models spend tokens on reasoning — disable it and widen the budget */
-            : { temperature: 0.6, maxOutputTokens: 1800, thinkingConfig: { thinkingBudget: 0 } }
+          generationConfig: { temperature: 0.6, maxOutputTokens: 1800, thinkingConfig: { thinkingBudget: 0 } }
         })
       });
       if (!r.ok) {
