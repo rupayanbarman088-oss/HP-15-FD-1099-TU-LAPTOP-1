@@ -147,7 +147,7 @@ async function askGemini(apiKey, system, clean) {
         console.error('Gemini error', model, r.status, detail);
         const err = new Error('gemini-failed');
         err.upstream = r.status;
-        try { const j = JSON.parse(detail); err.gType = (j.error && j.error.status) || ''; } catch (e) { /* non-JSON detail */ }
+        try { const j = JSON.parse(detail); err.gType = (j.error && j.error.status) || ''; err.gMsg = ((j.error && j.error.message) || '').slice(0, 220); } catch (e) { /* non-JSON detail */ }
         /* only fall through to the next model when it is unavailable for this one */
         if (r.status === 404 || r.status === 400 || r.status === 429) { lastErr = err; continue; }
         throw err;
@@ -222,7 +222,7 @@ export default async function handler(req, res) {
         if (out && out.text) return res.status(200).json({ reply: out.text, provider: 'gemini', gModel: out.meta && out.meta.model, gFinish: out.meta && out.meta.finishReason });
         return res.status(502).json({ error: 'empty-response' });
       } catch (err) {
-        return res.status(502).json({ error: 'unavailable', upstream: err.upstream || 0, gType: err.gType || '' });
+        return res.status(502).json({ error: 'unavailable', upstream: err.upstream || 0, gType: err.gType || '', gMsg: err.gMsg || '' });
       }
     }
     return res.status(502).json({ error: 'empty-response' });
