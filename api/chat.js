@@ -91,6 +91,13 @@ function retrieve(query) {
 }
 
 /* ---------------- provider calls ---------------- */
+/* circuit breakers: when a provider hits a quota error, stop calling it for a
+   while instead of burning more quota (state survives across warm invocations) */
+const breaker = { openai: 0, gemini: 0 };
+const BREAK_MS = 90 * 1000;
+const isMuted = p => Date.now() < breaker[p];
+const mute = p => { breaker[p] = Date.now() + BREAK_MS; };
+
 async function askOpenAI(apiKey, system, clean) {
   const model = process.env.OPENAI_MODEL || 'gpt-4o';
   /* reasoning-style models (o1/o3/o4/gpt-5...) reject temperature + max_tokens */
@@ -205,27 +212,29 @@ export default async function handler(req, res) {
     }
 
     /* OpenAI first when configured; Gemini as the alternate/fallback provider */
-    if (openaiKey) {
+    if (openaiKey && !isMuted('openai')) {
       try {
         const reply = await askOpenAI(openaiKey, system, clean);
         if (reply) return res.status(200).json({ reply, provider: 'openai' });
       } catch (err) {
-        if (!geminiKey) {
+        if (err.upstream === 429) mute('openai');
+        if (!geminiKey || isMuted('gemini')) {
           return res.status(502).json({ error: 'unavailable', upstream: err.upstream || 0, oaiType: err.oaiType || '', oaiCode: err.oaiCode || '' });
         }
         console.error('OpenAI failed, falling back to Gemini:', err.message);
       }
     }
-    if (geminiKey) {
+    if (geminiKey && !isMuted('gemini')) {
       try {
         const out = await askGemini(geminiKey, system, clean);
         if (out && out.text) return res.status(200).json({ reply: out.text, provider: 'gemini', gModel: out.meta && out.meta.model, gFinish: out.meta && out.meta.finishReason });
         return res.status(502).json({ error: 'empty-response' });
       } catch (err) {
+        if (err.upstream === 429) mute('gemini');
         return res.status(502).json({ error: 'unavailable', upstream: err.upstream || 0, gType: err.gType || '', gMsg: err.gMsg || '' });
       }
     }
-    return res.status(502).json({ error: 'empty-response' });
+    return res.status(502).json({ error: 'quota-cooldown' });
   } catch (e) {
     console.error('Chat endpoint error', e);
     return res.status(502).json({ error: 'unavailable' });
