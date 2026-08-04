@@ -9,8 +9,11 @@
  * site's own content. Unrelated questions fall through to the plain model.
  *
  * Environment variables (set in Vercel -> Project -> Settings -> Environment):
- *   OPENAI_API_KEY  - secret OpenAI key (required for live AI answers)
- *   OPENAI_MODEL    - optional model override (default: gpt-4o)
+ *   OPENAI_API_KEY  - secret OpenAI key (used first when present)
+ *   OPENAI_MODEL    - optional OpenAI model override (default: gpt-4o)
+ *   GEMINI_API_KEY  - Google AI Studio key (also accepts GOOGLE_API_KEY);
+ *                     used when OpenAI is missing or failing
+ *   GEMINI_MODEL    - optional Gemini model override (default: gemini-2.0-flash)
  */
 
 /* ---------------- website knowledge index (RAG corpus) ---------------- */
@@ -86,6 +89,64 @@ function retrieve(query) {
     .map(s => s.chunk);
 }
 
+/* ---------------- provider calls ---------------- */
+async function askOpenAI(apiKey, system, clean) {
+  const model = process.env.OPENAI_MODEL || 'gpt-4o';
+  /* reasoning-style models (o1/o3/o4/gpt-5...) reject temperature + max_tokens */
+  const isReasoning = /^(o[134]|gpt-5)/i.test(model);
+  const reqBody = {
+    model,
+    messages: [{ role: 'system', content: system }, ...clean]
+  };
+  if (isReasoning) reqBody.max_completion_tokens = 600;
+  else { reqBody.temperature = 0.6; reqBody.max_tokens = 600; }
+  const r = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${apiKey}`
+    },
+    body: JSON.stringify(reqBody)
+  });
+  if (!r.ok) {
+    const detail = await r.text().catch(() => '');
+    console.error('OpenAI error', r.status, detail);
+    const err = new Error('openai-failed');
+    err.upstream = r.status;
+    try { const j = JSON.parse(detail); err.oaiType = (j.error && j.error.type) || ''; err.oaiCode = (j.error && j.error.code) || ''; } catch (e) { /* non-JSON detail */ }
+    throw err;
+  }
+  const data = await r.json();
+  return (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || '';
+}
+
+async function askGemini(apiKey, system, clean) {
+  const model = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
+  const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-goog-api-key': apiKey
+    },
+    body: JSON.stringify({
+      systemInstruction: { parts: [{ text: system }] },
+      contents: clean.map(m => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] })),
+      generationConfig: { temperature: 0.6, maxOutputTokens: 600 }
+    })
+  });
+  if (!r.ok) {
+    const detail = await r.text().catch(() => '');
+    console.error('Gemini error', r.status, detail);
+    const err = new Error('gemini-failed');
+    err.upstream = r.status;
+    try { const j = JSON.parse(detail); err.gType = (j.error && j.error.status) || ''; } catch (e) { /* non-JSON detail */ }
+    throw err;
+  }
+  const data = await r.json();
+  const parts = data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts;
+  return parts ? parts.map(p => p.text || '').join('') : '';
+}
+
 /* ---------------- handler ---------------- */
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -116,41 +177,34 @@ export default async function handler(req, res) {
         'Answer general questions helpfully and concisely. If asked about this website or the laptop, mention what the site showcases. ' +
         'Use light markdown (bold, lists) when it helps.';
 
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) {
+    const openaiKey = process.env.OPENAI_API_KEY;
+    const geminiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+    if (!openaiKey && !geminiKey) {
       return res.status(503).json({ error: 'not-configured' });
     }
 
-    const model = process.env.OPENAI_MODEL || 'gpt-4o';
-    /* reasoning-style models (o1/o3/o4/gpt-5...) reject temperature + max_tokens */
-    const isReasoning = /^(o[134]|gpt-5)/i.test(model);
-    const reqBody = {
-      model,
-      messages: [{ role: 'system', content: system }, ...clean]
-    };
-    if (isReasoning) reqBody.max_completion_tokens = 600;
-    else { reqBody.temperature = 0.6; reqBody.max_tokens = 600; }
-    const r = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`
-      },
-      body: JSON.stringify(reqBody)
-    });
-
-    if (!r.ok) {
-      const detail = await r.text().catch(() => '');
-      console.error('OpenAI error', r.status, detail);
-      let oaiType = '', oaiCode = '';
-      try { const j = JSON.parse(detail); oaiType = (j.error && j.error.type) || ''; oaiCode = (j.error && j.error.code) || ''; } catch (e) { /* non-JSON detail */ }
-      return res.status(502).json({ error: 'unavailable', upstream: r.status, oaiType, oaiCode });
+    /* OpenAI first when configured; Gemini as the alternate/fallback provider */
+    if (openaiKey) {
+      try {
+        const reply = await askOpenAI(openaiKey, system, clean);
+        if (reply) return res.status(200).json({ reply, provider: 'openai' });
+      } catch (err) {
+        if (!geminiKey) {
+          return res.status(502).json({ error: 'unavailable', upstream: err.upstream || 0, oaiType: err.oaiType || '', oaiCode: err.oaiCode || '' });
+        }
+        console.error('OpenAI failed, falling back to Gemini:', err.message);
+      }
     }
-
-    const data = await r.json();
-    const reply = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || '';
-    if (!reply) return res.status(502).json({ error: 'empty-response' });
-    return res.status(200).json({ reply });
+    if (geminiKey) {
+      try {
+        const reply = await askGemini(geminiKey, system, clean);
+        if (reply) return res.status(200).json({ reply, provider: 'gemini' });
+        return res.status(502).json({ error: 'empty-response' });
+      } catch (err) {
+        return res.status(502).json({ error: 'unavailable', upstream: err.upstream || 0, gType: err.gType || '' });
+      }
+    }
+    return res.status(502).json({ error: 'empty-response' });
   } catch (e) {
     console.error('Chat endpoint error', e);
     return res.status(502).json({ error: 'unavailable' });
