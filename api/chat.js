@@ -121,30 +121,47 @@ async function askOpenAI(apiKey, system, clean) {
 }
 
 async function askGemini(apiKey, system, clean) {
-  const model = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
-  const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-goog-api-key': apiKey
-    },
-    body: JSON.stringify({
-      systemInstruction: { parts: [{ text: system }] },
-      contents: clean.map(m => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] })),
-      generationConfig: { temperature: 0.6, maxOutputTokens: 600 }
-    })
-  });
-  if (!r.ok) {
-    const detail = await r.text().catch(() => '');
-    console.error('Gemini error', r.status, detail);
-    const err = new Error('gemini-failed');
-    err.upstream = r.status;
-    try { const j = JSON.parse(detail); err.gType = (j.error && j.error.status) || ''; } catch (e) { /* non-JSON detail */ }
-    throw err;
+  /* preferred model first, then alternates — quotas are per-model */
+  const preferred = process.env.GEMINI_MODEL;
+  const models = preferred
+    ? [preferred]
+    : ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-flash-latest', 'gemini-1.5-flash'];
+  let lastErr = null;
+  for (const model of models) {
+    try {
+      const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-goog-api-key': apiKey
+        },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: system }] },
+          contents: clean.map(m => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] })),
+          generationConfig: { temperature: 0.6, maxOutputTokens: 600 }
+        })
+      });
+      if (!r.ok) {
+        const detail = await r.text().catch(() => '');
+        console.error('Gemini error', model, r.status, detail);
+        const err = new Error('gemini-failed');
+        err.upstream = r.status;
+        try { const j = JSON.parse(detail); err.gType = (j.error && j.error.status) || ''; } catch (e) { /* non-JSON detail */ }
+        /* only fall through to the next model when it is unavailable for this one */
+        if (r.status === 404 || r.status === 400 || r.status === 429) { lastErr = err; continue; }
+        throw err;
+      }
+      const data = await r.json();
+      const parts = data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts;
+      const text = parts ? parts.map(p => p.text || '').join('') : '';
+      if (text) return text;
+      lastErr = new Error('gemini-empty');
+    } catch (e) {
+      if (e.upstream) { lastErr = e; continue; }
+      throw e;
+    }
   }
-  const data = await r.json();
-  const parts = data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts;
-  return parts ? parts.map(p => p.text || '').join('') : '';
+  throw lastErr || new Error('gemini-failed');
 }
 
 /* ---------------- handler ---------------- */
