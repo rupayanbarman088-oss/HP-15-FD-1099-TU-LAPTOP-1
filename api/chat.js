@@ -138,7 +138,10 @@ async function askGemini(apiKey, system, clean) {
         body: JSON.stringify({
           systemInstruction: { parts: [{ text: system }] },
           contents: clean.map(m => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] })),
-          generationConfig: { temperature: 0.6, maxOutputTokens: 600 }
+          generationConfig: /^gemini-2\.5/.test(model)
+            /* thinking models spend tokens on reasoning — disable it and widen the budget */
+            ? { temperature: 0.6, maxOutputTokens: 1800, thinkingConfig: { thinkingBudget: 0 } }
+            : { temperature: 0.6, maxOutputTokens: 600 }
         })
       });
       if (!r.ok) {
